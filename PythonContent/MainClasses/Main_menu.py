@@ -40,7 +40,7 @@ class Menu:
                     if quit_button.is_clicked(event.pos):
                         running_menu = False
                     if instant_action_button.is_clicked(event.pos):
-                        subprocess.Popen([sys.executable, "GameScripts/CombatGrid.py"])
+                        subprocess.Popen([sys.executable, "CombatGrid.py"])
                     if campaign_button.is_clicked(event.pos):
                         self.Run_CampaignMenu()
                         return
