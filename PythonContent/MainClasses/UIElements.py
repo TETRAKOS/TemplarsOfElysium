@@ -1,6 +1,7 @@
 import pygame
 
 
+
 class Button:
     def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255)):
         self.text = text
@@ -25,12 +26,12 @@ class Button:
 
 
 class TextRenderer:
-    def __init__(self, font_name='Arial', font_size=48, color=(255, 255, 255)):
-        self.font = pygame.font.SysFont(font_name, font_size)
+    def __init__(self, font, color=(255, 255, 255)):
+        self.font = font  # Accept a pygame.font.Font object
         self.color = color
 
     def render_text(self, text):
-        text_surface = self.font.render(text, False, self.color)
+        text_surface = self.font.render(text, False, self.color)  # Use True for anti-aliasing
         text_rect = text_surface.get_rect()
         return text_surface, text_rect
 
@@ -38,3 +39,6 @@ class TextRenderer:
         text_surface, text_rect = self.render_text(text)
         text_rect.topleft = position
         surface.blit(text_surface, text_rect)
+
+
+
