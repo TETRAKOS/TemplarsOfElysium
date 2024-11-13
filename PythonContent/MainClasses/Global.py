@@ -13,26 +13,27 @@ class Shell:
 
     def Run_shell(self):
         running = True
-        self.InitSQL()
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
             self.surface.fill(self.bgc)
             pygame.display.flip()
-    def InitSQL(self):
-        connection = sqlite3.connect('GameData/save.db')
-        self.cursor = connection.cursor()
-        self.cursor.execute('''
-        CREATE TABLE IF NOT EXISTS player (
-            id INTEGER PRIMARY KEY,
-            name TEXT NOT NULL,
-            age INTEGER
-        )
-        ''')
-
-        self.cursor.close()
-        connection.close()
+    def load_save(self):
+        pass
+    # def InitSQL(self):
+    #     connection = sqlite3.connect('GameData/save.db')
+    #     self.cursor = connection.cursor()
+    #     self.cursor.execute('''
+    #     CREATE TABLE IF NOT EXISTS player (
+    #         id INTEGER PRIMARY KEY,
+    #         name TEXT NOT NULL,
+    #         age INTEGER
+    #     )
+    #     ''')
+    #
+    #     self.cursor.close()
+    #     connection.close()
 class Town():
     pass
 class District():
