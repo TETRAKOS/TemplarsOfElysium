@@ -40,5 +40,34 @@ class TextRenderer:
         text_rect.topleft = position
         surface.blit(text_surface, text_rect)
 
+class InputBox:
+    def __init__(self, position, size, font):
+        self.color = (0,0,0)
+        self.rect = pygame.Rect(position, size)
+        self.pos = position
+        self.size = size
+        self.text = ''
+        self.active = False
+        self.font = pygame.font.Font("Assets/fonts/Game/HomeVideo-Regular.otf", 32)
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+            self.color = (0,0,0) if self.active else (125,125,125)
+        if event.type == pygame.KEYDOWN and self.active:
+            if event.key == pygame.K_RETURN:
+                print(self.text)
+                self.text = ""
+            elif event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            else:
+                self.text += event.unicode
+    def draw(self,screen):
+        pygame.draw.rect(screen, self.color, self.rect,2)
+        text_surface = self.font.render(self.text, False, (0,0,0))
+        screen.blit(text_surface,(self.rect.x + 5, self.rect.y + 5))
 
-
+    def get_name(self):
+        return self.text

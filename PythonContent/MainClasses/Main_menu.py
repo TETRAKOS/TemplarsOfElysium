@@ -1,8 +1,9 @@
 import pygame
+
+from PythonContent.MainClasses.UIElements import InputBox
 from UIElements import TextRenderer, Button
-import subprocess
-import sys
-import os
+import subprocess, os, sys
+import sqlite3
 
 class Menu:
     def __init__(self):
@@ -58,7 +59,41 @@ class Menu:
             campaign_button.draw(self.surface)
 
             pygame.display.flip()
+    def new_game_menu(self):
+        create_button = Button("confirm", ((self.surface.get_width()-280), 480), (260, 50),
+                               self.button_font)
+        name_ib = InputBox(((self.surface.get_width()-480), 480,),(200,50),self.button_font)
+        ng_run = True
+        while ng_run == True:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    ng_run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if create_button.is_clicked(event.pos):
+                        self.new_gameSQL(name_ib.get_name())
+                name_ib.handle_event(event)
+            create_button.draw(self.surface)
+            name_ib.draw(self.surface)
+            pygame.display.flip()
 
+    def new_gameSQL(self, profile_name=None):
+        connection = sqlite3.connect("GameData/players.db")
+        self.cursor = connection.cursor()
+        if profile_name != None:
+            profile_dir = "GameData/"+profile_name
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS player(
+                        id INTEGER,
+                        profile_dir TEXT NOT NULL,
+                        profile_name TEXT NOT NULL)
+                        ''')
+            self.cursor.execute(f'SELECT COUNT(*) FROM player')
+            counter = self.cursor.fetchone()[0]
+            self.cursor.execute('''INSERT INTO player (id,profile_dir,profile_name) 
+                                           VALUES (?, ?, ?)''', (counter, profile_dir, profile_name))
+            connection.commit()
+
+        self.cursor.close()
+        connection.close()
     def Run_CampaignMenu(self):
         new_btn = Button("New Game", ((self.surface.get_width()-280), 480), (260, 50), self.button_font)
         back_btn = Button("Back", ((self.surface.get_width()-220), 540),(200,50), self.button_font)
@@ -80,7 +115,9 @@ class Menu:
                         running_menu = False  # Exit the campaign menu
                         return
                     if new_btn.is_clicked(event.pos):
-                        subprocess.Popen([sys.executable, "Global.py"])
+                        self.new_game_menu()
+                        return
+        #                subprocess.Popen([sys.executable, "Global.py"])
                     if loadgame_btn.is_clicked(event.pos):
                         print("Loading game...")
                     if continue_btn.is_clicked(event.pos):
