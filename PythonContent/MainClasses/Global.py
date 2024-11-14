@@ -1,5 +1,6 @@
 import pygame
 import sqlite3
+import sys
 
 
 class Shell:
@@ -10,6 +11,12 @@ class Shell:
         self.surface = pygame.display.set_mode((1024, 600))
         self.bgc = (45, 48, 44)
         pygame.display.set_icon(self.gameIcon)
+        if len(sys.argv) > 1:
+            self.profile = sys.argv[1]
+            print(self.profile)
+    def main_screen(self):
+        circle_map = pygame.image.load("Assets/Sprites/Screens/landing.png")
+        circle_image = circle_map.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
 
     def Run_shell(self):
         running = True
@@ -34,9 +41,9 @@ class Shell:
     #
     #     self.cursor.close()
     #     connection.close()
-class Town():
+class Town:
     pass
-class District():
+class District:
     pass
 
 shell = Shell()

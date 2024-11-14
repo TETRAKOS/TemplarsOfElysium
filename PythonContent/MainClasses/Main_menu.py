@@ -1,5 +1,4 @@
 import pygame
-import json
 from PythonContent.MainClasses.UIElements import InputBox
 from UIElements import TextRenderer, Button
 import subprocess, os, sys
@@ -72,11 +71,10 @@ class Menu:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if create_button.is_clicked(event.pos):
                         self.new_gameSQL(name_ib.get_name())
-                        with open("GameData/menuD.txt", "w") as s:
-                            f = name_ib.get_name()
-                            s.write(f)
-                        subprocess.Popen([sys.executable, "Global.py"])
-
+                        # with open("GameData/menuD.txt", "w") as s:
+                        #     f = name_ib.get_name()
+                        #     s.write(f)
+                        subprocess.Popen([sys.executable, "Global.py", name_ib.get_name()])
                     elif back_btn.is_clicked(event.pos):
                         self.Run_CampaignMenu()
                         ng_run = False
@@ -91,7 +89,7 @@ class Menu:
         connection = sqlite3.connect("GameData/players.db")
         self.cursor = connection.cursor()
         if profile_name is not None:
-            profile_dir = "GameData/" + profile_name
+            profile_dir = "GameData/" + profile_name + ".db"
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS player(
                         id INTEGER,
                         profile_dir TEXT NOT NULL,
@@ -111,25 +109,7 @@ class Menu:
                         tech TEXT NOT NULL,
                         advances TEXT NOT NULL,
                         storage TEXT NOT NULL
-                        )''')  # Closing parenthesis added here
-
-            # Example of inserting data into the profile_data table
-            character_data = {
-  #              "day": 1,
-  #              "tech": {"item1": "value1", "item2": "value2"},
-  #              "advances": {"item1": 1, "item2": 2},
-  #              "storage": {"item1": 10, "item2": 20}
-            }
-
-            # Convert dictionaries to JSON strings
-  #          tech_json = json.dumps(character_data['tech'])
-  #          advances_json = json.dumps(character_data['advances'])
-  #          storage_json = json.dumps(character_data['storage'])
-
-            # Insert the JSON strings into the table
-  #          pcursor.execute('''
-  #              INSERT INTO profile_data (day, tech, advances, storage) VALUES (?, ?, ?, ?)
-  #          ''', (character_data['day'], tech_json, advances_json, storage_json))
+                        )''')
 
             profile.commit()
             pcursor.close()
@@ -164,7 +144,12 @@ class Menu:
                     if loadgame_btn.is_clicked(event.pos):
                         print("Loading game...")
                     if continue_btn.is_clicked(event.pos):
-                        print("Continuing game...")
+                        # print("Continuing game...")
+                        conn = sqlite3.connect("GameData/players.db")
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT * FROM player ORDER BY id DESC LIMIT 1")
+                        last_save = cursor.fetchone()
+                        subprocess.Popen([sys.executable, "Global.py", last_save[2]])
             self.surface.fill(self.bgc)  # Clear the surface for the campaign menu
             new_btn.draw(self.surface)
             back_btn.draw(self.surface)
