@@ -14,9 +14,19 @@ class Shell:
         if len(sys.argv) > 1:
             self.profile = sys.argv[1]
             print(self.profile)
+            self.main_screen()
+
     def main_screen(self):
-        circle_map = pygame.image.load("Assets/Sprites/Screens/landing.png")
-        circle_image = circle_map.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
+        circle_map = pygame.image.load("Assets/Sprites/Backdrops/Circle.png")
+        circle_image = circle_map.get_rect(center=(500, (self.surface.get_height() // 2) - 150))
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+            self.surface.fill(self.bgc)
+            self.surface.blit(circle_map, circle_image)
+            pygame.display.flip()
 
     def Run_shell(self):
         running = True
@@ -28,19 +38,7 @@ class Shell:
             pygame.display.flip()
     def load_save(self):
         pass
-    # def InitSQL(self):
-    #     connection = sqlite3.connect('GameData/save.db')
-    #     self.cursor = connection.cursor()
-    #     self.cursor.execute('''
-    #     CREATE TABLE IF NOT EXISTS player (
-    #         id INTEGER PRIMARY KEY,
-    #         name TEXT NOT NULL,
-    #         age INTEGER
-    #     )
-    #     ''')
-    #
-    #     self.cursor.close()
-    #     connection.close()
+
 class Town:
     pass
 class District:
