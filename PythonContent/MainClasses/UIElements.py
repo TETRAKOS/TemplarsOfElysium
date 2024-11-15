@@ -82,3 +82,25 @@ class InputBox:
 
     def get_name(self):
         return self.text
+class ImageButton:
+    def __init__(self, image_normal, image_hovered, rect):
+        self.image_normal = image_normal
+        self.image_hovered = image_hovered
+        self.rect = rect
+        self.is_hovered = False
+
+    def draw(self, surface):
+        if self.is_hovered:
+            surface.blit(self.image_hovered, self.rect)
+        else:
+            surface.blit(self.image_normal, self.rect)
+
+    def is_clicked(self, pos):
+        return self.rect.collidepoint(pos)
+
+    def update(self, mouse_pos):
+        # Check if the mouse is over the button
+        if self.rect.collidepoint(mouse_pos):
+            self.is_hovered = True
+        else:
+            self.is_hovered = False

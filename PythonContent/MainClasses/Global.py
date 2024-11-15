@@ -24,6 +24,7 @@ class Shell:
         circle_image = circle_map.get_rect(center=(500, (self.surface.get_height() // 2)))
         raid_btn, tech_btn, info_btn,misc_btn = self.low_buttons_array("Mission")
 
+
     def low_buttons_array(self, state):
         raid_btn = Button("Mission", (50, 550), (225, 50), self.button_font, self.b_bgc,enabled=True)
         if state == "Mission":
