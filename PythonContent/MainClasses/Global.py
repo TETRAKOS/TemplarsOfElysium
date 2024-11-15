@@ -18,34 +18,34 @@ class Shell:
         if len(sys.argv) > 1:
             self.profile = sys.argv[1]
             print(self.profile)
-            self.main_screen()
-
-    def main_screen(self):
-        raid_btn = Button("Raid", (50, 550), (225,50), self.button_font, self.b_bgc)
-        tech_btn = Button("Tech", (275, 550), (225, 50), self.button_font, self.b_bgc)
-        info_btn = Button("Info", (500, 550), (225, 50), self.button_font, self.b_bgc)
-        misc_btn = Button("Misc", (725, 550), (225, 50), self.button_font, self.b_bgc)
+            self.mission_screen()
+    def mission_screen(self):
         circle_map = pygame.image.load("Assets/Sprites/Backdrops/Circle.png")
         circle_image = circle_map.get_rect(center=(500, (self.surface.get_height() // 2)))
-        running = True
-        while running:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    running = False
-            self.surface.fill(self.bgc)
-            self.surface.blit(circle_map, circle_image)
-            raid_btn.draw(self.surface)
-            tech_btn.draw(self.surface)
-            info_btn.draw(self.surface)
-            misc_btn.draw(self.surface)
-            pygame.display.flip()
+        raid_btn, tech_btn, info_btn,misc_btn = self.low_buttons_array("Mission")
 
+    def low_buttons_array(self, state):
+        raid_btn = Button("Mission", (50, 550), (225, 50), self.button_font, self.b_bgc,enabled=True)
+        if state == "Mission":
+            raid_btn.set_enabled(False)
+        tech_btn = Button("Tech", (275, 550), (225, 50), self.button_font, self.b_bgc, enabled=True)
+        if state == "Tech":
+            tech_btn.set_enabled(False)
+        units_btn = Button("Units", (500, 550), (225, 50), self.button_font, self.b_bgc, enabled=True)
+        if state == "Units":
+            units_btn.set_enabled(False)
+        info_btn = Button("Info", (725, 550), (225, 50), self.button_font, self.b_bgc, enabled=True)
+        if state == "Info":
+            info_btn.set_enabled(False)
+        return raid_btn,tech_btn,units_btn,info_btn
     # def Run_shell(self):
     #     running = True
     #     while running:
     #         for event in pygame.event.get():
-    #             if event.type == pygame.QUIT:
-    #                 running = False
+    #              if event.type == pygame.QUIT:
+    #                  running = False
+    #              if event.type == pygame.MOUSEBUTTONDOWN:
+    #                  if
     #         self.surface.fill(self.bgc)
     #         pygame.display.flip()
     # def load_save(self):

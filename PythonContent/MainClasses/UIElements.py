@@ -3,7 +3,7 @@ import pygame
 
 
 class Button:
-    def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255)):
+    def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255),enabled = True):
         self.text = text
         self.position = position
         self.size = size
@@ -11,10 +11,15 @@ class Button:
         self.color = color
         self.text_color = text_color
         self.rect = pygame.Rect(position, size)
-
+        self.enabled = True
     def draw(self, surface):
         # Draw the button rectangle
-        pygame.draw.rect(surface, self.color, self.rect)
+        if not self.enabled:
+            # Change color when disabled (e.g., gray out)
+            disabled_color = (150, 150, 150)  # Example disabled color
+            pygame.draw.rect(surface, disabled_color, self.rect)
+        else:
+            pygame.draw.rect(surface, self.color, self.rect)
 
         # Render the text
         text_surface, text_rect = self.font.render_text(self.text)
@@ -22,7 +27,13 @@ class Button:
         surface.blit(text_surface, text_rect)
 
     def is_clicked(self, mouse_pos):
-        return self.rect.collidepoint(mouse_pos)
+        # Only allow clicks if the button is not disabled
+        if self.enabled:
+            return self.rect.collidepoint(mouse_pos)
+        return False
+
+    def set_enabled(self, enabled):
+        self.enabled = enabled  # Method to enable/disable the button
 
 
 class TextRenderer:
