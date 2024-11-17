@@ -9,10 +9,13 @@ class Menu:
     def __init__(self):
         # Initialize Pygame
         pygame.init()
-
+        pygame.mixer.init()
         self.font_path = os.path.join("HomeVideo-Regular", "Assets/fonts/Game/HomeVideo-Regular.otf")
         self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 48)
         self.button_font = TextRenderer(self.font, color=(255, 255, 255))
+        self.music = pygame.mixer.Sound("Assets/Sound/Music/TE_menu.wav")
+        self.music.set_volume(0.4)
+        self.music.play(-1)
 
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_caption("Templars of Elysium")
@@ -22,12 +25,12 @@ class Menu:
         pygame.display.set_icon(self.gameIcon)
 
     def run_menu(self):
-        quit_button = Button("Quit", ((self.surface.get_width() - 220), 540), (200, 50), self.button_font, enabled=True)
-        options_button = Button("Game Properties", ((self.surface.get_width() - 470), 480), (450, 50), self.button_font,
+        quit_button = Button("Quit", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
+        options_button = Button("Game Properties", ((self.surface.get_width() - 470), 480), (450, 50), self.font,
                                 enabled=True)
         instant_action_button = Button("Instant Action", ((self.surface.get_width() - 420), 420), (400, 50),
-                                       self.button_font, enabled=True)
-        campaign_button = Button("Campaign", ((self.surface.get_width() - 260), 360), (240, 50), self.button_font,
+                                       self.font, enabled=True)
+        campaign_button = Button("Campaign", ((self.surface.get_width() - 260), 360), (240, 50), self.font,
                                  enabled=True)
         game_logo = self.gameIcon.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
         game_logo_sized = pygame.transform.scale(self.gameIcon, (256, 256))
@@ -49,7 +52,7 @@ class Menu:
             self.surface.fill(self.bgc)
 
             name_render = TextRenderer(self.font, color=(255, 255, 255))
-            name_render.draw_text(self.surface, "TEMPLARS OF ELYSIUM", (20, 20))
+            name_render.draw_text(self.surface, "TEMPLARS OF ELYSIUM", (20, 20), 2000)
 
             # Draw the buttons
             self.surface.blit(game_logo_sized, game_logo)
@@ -61,10 +64,10 @@ class Menu:
             pygame.display.flip()
 
     def new_game_menu(self):
-        create_button = Button("confirm", ((self.surface.get_width() - 280), 480), (260, 50), self.button_font,
+        create_button = Button("confirm", ((self.surface.get_width() - 280), 480), (260, 50), self.font,
                                enabled=True)
-        name_ib = InputBox(((self.surface.get_width() - 480), 480,), (200, 50), self.button_font)
-        back_btn = Button("return", ((self.surface.get_width() - 220), 540), (200, 50), self.button_font, enabled=True)
+        name_ib = InputBox(((self.surface.get_width() - 480), 480,), (200, 50), self.font)
+        back_btn = Button("return", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
         ng_run = True
         while ng_run:
             for event in pygame.event.get():
@@ -120,11 +123,11 @@ class Menu:
         self.cursor.close()
         connection.close()
     def Run_CampaignMenu(self):
-        new_btn = Button("New Game", ((self.surface.get_width() - 280), 480), (260, 50), self.button_font, enabled=True)
-        back_btn = Button("Back", ((self.surface.get_width() - 220), 540), (200, 50), self.button_font, enabled=True)
-        loadgame_btn = Button("Load Game", ((self.surface.get_width() - 280), 420), (260, 50), self.button_font,
+        new_btn = Button("New Game", ((self.surface.get_width() - 280), 480), (260, 50), self.font, enabled=True)
+        back_btn = Button("Back", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
+        loadgame_btn = Button("Load Game", ((self.surface.get_width() - 280), 420), (260, 50), self.font,
                               enabled=True)
-        continue_btn = Button("Continue", ((self.surface.get_width() - 260), 360), (240, 50), self.button_font,
+        continue_btn = Button("Continue", ((self.surface.get_width() - 260), 360), (240, 50), self.font,
                               enabled=True)
         typer_render = TextRenderer(self.font, color=(255, 255, 255))
         land_image = pygame.image.load("Assets/Sprites/Screens/landing.png")
@@ -160,7 +163,7 @@ class Menu:
             loadgame_btn.draw(self.surface)
             continue_btn.draw(self.surface)
             self.surface.blit(game_logo_sized, game_logo)
-            typer_render.draw_text(self.surface, "Campaign Mode", (20, 20))
+            typer_render.draw_text(self.surface, "Campaign Mode", (20, 20),2000)
             pygame.display.flip()
         pygame.quit()
 
