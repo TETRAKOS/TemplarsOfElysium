@@ -8,7 +8,9 @@ class Actor:
         self.rect = pygame.Rect(pos, self.icon.get_size())
 class Wall(Actor):
     def __init__(self, pos):
-        super().__init__(pos, "Assets/Tiles/wall.png")
+        super().__init__(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_default.png")
+    #def __str__(self):
+     #   print("Wall")
 class Player(Actor):
     def __init__(self, pos, icon):
         super().__init__(pos, icon)
