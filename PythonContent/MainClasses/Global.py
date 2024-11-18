@@ -65,7 +65,9 @@ class Shell:
                     if raid_btn.is_clicked(event.pos):
                             print("Raid Button Clicked")
                     elif tech_btn.is_clicked(event.pos):
-                            print("Tech Button Clicked")
+                            self.tech_menu()
+                            menu_running = False
+
                     elif info_btn.is_clicked(event.pos):
                             print("Info Button Clicked")
                     elif misc_btn.is_clicked(event.pos):
@@ -162,9 +164,28 @@ class Shell:
     #         pygame.display.flip()
     # def load_save(self):
     #     pass
+    def tech_menu(self):
+        raid_b, tech_b, gear_b, info_b = self.low_buttons_array('Tech')
+        t_running=True
+        while t_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    t_running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if raid_b.is_clicked(event.pos):
+                        self.mission_screen()
+                        t_running = False
+                    elif tech_b.is_clicked(event.pos):
+                        print("none")
+                    elif gear_b.is_clicked(event.pos):
+                        print("Units")
+                    elif info_b.is_clicked(event.pos):
+                        print("info")
+            self.surface.fill(self.bgc)
+            raid_b.draw(self.surface), tech_b.draw(self.surface), gear_b.draw(self.surface), info_b.draw(
+                self.surface)
+            pygame.display.flip()
 
-class Tech:
-    pass
 class District:
     pass
 

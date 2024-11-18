@@ -156,6 +156,7 @@ class Menu:
                         cursor = conn.cursor()
                         cursor.execute("SELECT * FROM player ORDER BY id DESC LIMIT 1")
                         last_save = cursor.fetchone()
+                        pygame.display.iconify()
                         subprocess.Popen([sys.executable, "Global.py", last_save[2]])
             self.surface.fill(self.bgc)  # Clear the surface for the campaign menu
             new_btn.draw(self.surface)
