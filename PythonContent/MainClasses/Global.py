@@ -186,7 +186,7 @@ class Shell:
                 self.surface)
             pygame.display.flip()
 
-class District:
-    pass
+# class District:
+#     pass
 
 shell = Shell()
