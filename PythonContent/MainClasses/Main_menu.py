@@ -1,13 +1,11 @@
 import pygame
-from PythonContent.MainClasses.UIElements import InputBox
-from UIElements import TextRenderer, Button
+from UIElements import TextRenderer, Button, InputBox
 import subprocess, os, sys
 import sqlite3
 
 
 class Menu:
     def __init__(self):
-        # Initialize Pygame
         pygame.init()
         pygame.mixer.init()
         self.font_path = os.path.join("HomeVideo-Regular", "Assets/fonts/Game/HomeVideo-Regular.otf")
@@ -34,7 +32,6 @@ class Menu:
                                  enabled=True)
         game_logo = self.gameIcon.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
         game_logo_sized = pygame.transform.scale(self.gameIcon, (256, 256))
-        # Main loop
         running_menu = True
         while running_menu:
             for event in pygame.event.get():
