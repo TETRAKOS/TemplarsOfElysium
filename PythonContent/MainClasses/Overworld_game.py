@@ -1,5 +1,5 @@
 import pygame
-from Entities import Player, Hostile, Actor, Wall
+from Entities import Player, Hostile, Actor, Wall, Loot
 from UIElements import Rectangle, TextRenderer
 
 
@@ -14,7 +14,7 @@ class Grid:
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x] = value
-            print(self.grid[y][x])
+          #  print(self.grid[y][x])
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -26,11 +26,19 @@ class Grid:
             for x in range(self.width):
                 rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
                                    self.cell_size)
-                pygame.draw.rect(surface, (200, 200, 200), rect, 1)
+                pygame.draw.rect(surface, (30, 30, 30), rect, 1)
 
                 cell_value = self.grid[y][x]
                 if isinstance(cell_value, Actor):
                     surface.blit(cell_value.icon, rect)
+    def get_actors(self):
+        actors = []
+        for y in range(self.height):
+            for x in range(self.width):
+                cell_value = self.grid[y][x]
+                if isinstance(cell_value, Actor):
+                    actors.append(cell_value)
+        return actors
 
 class Game:
     def __init__(self):
@@ -50,11 +58,11 @@ class Game:
         self.player = Player((self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
                              "Assets/Sprites/Entities/Creatures/Player/fig1.png")
 
-        self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)  # Mark the player's position on the grid
+        self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         self.enemy = Hostile((5 * self.grid.cell_size, 5 * self.grid.cell_size), "Assets/Sprites/Entities/Creatures/Walker/walker.png")
-        self.grid.set_cell(5, 5, "enemy")  # Mark the enemy's position on the grid
+        self.grid.set_cell(5, 5, Hostile((5,5),"Assets/Sprites/Entities/Creatures/Walker/walker.png"))
 
-        self.turn_count = 0  # Initialize turn count
+        self.turn_count = 0
         self.is_player_turn = True
 
         self.map_loop()
@@ -67,8 +75,8 @@ class Game:
             self.grid.set_cell(0, i, Wall((i * self.grid.cell_size, 0)))
             self.grid.set_cell(19, i, Wall((i * self.grid.cell_size, 0)))
 
-        self.grid.set_cell(5, 5, "item")
-        self.grid.set_cell(10, 10, "item")
+        self.grid.set_cell(7, 7, Loot((5,5),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+        self.grid.set_cell(10, 10, Loot((10,10),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
 
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
@@ -88,11 +96,33 @@ class Game:
 
             self.surface.fill(self.bgc)
             self.update_camera()
-            self.grid.draw(self.surface, self.camera)  # Pass camera position to draw method
-    #        self.surface.blit(self.player.icon,
-    #                          (self.player.rect.x - self.camera[0], self.player.rect.y - self.camera[1]))
+            self.grid.draw(self.surface, self.camera)
+
 
             backdrop.draw(self.surface)
+            mouse_pos = pygame.mouse.get_pos()
+
+            tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
+            tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
+
+            actor = self.grid.get_cell(tile_x, tile_y)
+            if isinstance(actor, Actor):
+                info_text = actor.getinfo()
+                text_surface = self.font_small.render(info_text, True, (255, 255, 255))
+                text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
+                self.surface.blit(text_surface, text_rect)
+                if isinstance(actor, Hostile):
+                    pygame.mouse.set_cursor(pygame.cursors.diamond)
+                    distance_x = abs(self.player_pos[0] - tile_x)
+                    distance_y = abs(self.player_pos[1] - tile_y)
+                    c_info = max(distance_x, distance_y)
+                    c_text = f"Distance: {c_info} cells"
+                    text_surface = self.font_small.render(c_text, True, (255, 255, 255))
+                    text_rect = text_surface.get_rect(
+                        topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
+                    self.surface.blit(text_surface, text_rect)
+            else:
+                pygame.mouse.set_cursor(pygame.cursors.arrow)
 
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -113,7 +143,7 @@ class Game:
     def move_player(self, move):
         new_x = self.player_pos[0] + move[0]
         new_y = self.player_pos[1] + move[1]
-        if not isinstance(self.grid.get_cell(new_x, new_y), Actor):# and self.grid.get_cell(new_x, new_y) !=Actor:
+        if not isinstance(self.grid.get_cell(new_x, new_y), Actor):
             self.grid.set_cell(self.player_pos[0], self.player_pos[1], None)  # Clear old position
             self.player_pos = [new_x, new_y]
             self.grid.set_cell(new_x, new_y, self.player)
