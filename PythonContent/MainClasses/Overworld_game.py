@@ -45,10 +45,11 @@ class Game:
         pygame.init()
         self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
         self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+        self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
         pygame.display.set_caption("Templars of Elysium - Map")
-        self.surface = pygame.display.set_mode((1024, 600))
+        self.surface = pygame.display.set_mode((1024, 768))
         self.bgc = (45, 48, 44)
         self.camera = [0, 0]
         self.clock = pygame.time.Clock()
@@ -108,9 +109,11 @@ class Game:
             actor = self.grid.get_cell(tile_x, tile_y)
             if isinstance(actor, Actor):
                 info_text = actor.getinfo()
-                text_surface = self.font_small.render(info_text, True, (255, 255, 255))
+                text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
                 text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
                 self.surface.blit(text_surface, text_rect)
+                if isinstance(actor, Loot):
+                    pygame.mouse.set_cursor(pygame.cursors.ball)
                 if isinstance(actor, Hostile):
                     pygame.mouse.set_cursor(pygame.cursors.diamond)
                     distance_x = abs(self.player_pos[0] - tile_x)

@@ -30,13 +30,13 @@ class Player(Actor):
     def handle_input(self, event):
         move = (0,0)
         if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
+            if event.key == pygame.K_w:
                 move = (0, -1)
-            elif event.key == pygame.K_DOWN:
+            elif event.key == pygame.K_s:
                 move = (0, 1)
-            elif event.key == pygame.K_LEFT:
+            elif event.key == pygame.K_a:
                 move = (-1, 0)
-            elif event.key == pygame.K_RIGHT:
+            elif event.key == pygame.K_d:
                 move = (1, 0)
         return move
 class Hostile(Actor):

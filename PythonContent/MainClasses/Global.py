@@ -1,6 +1,7 @@
 import pygame
 #import sqlite3
 import sys
+import subprocess
 
 from PythonContent.MainClasses.UIElements import ImageButton
 from UIElements import Button, TextRenderer
@@ -107,10 +108,12 @@ class Shell:
                         print("Load Button Clicked")
                     elif prep_raid_btn.is_clicked(event.pos):
                         print("Preparation for Raid Button Clicked")
+                        subprocess.Popen([sys.executable, "Overworld_game.py"])
                     elif options_btn.is_clicked(event.pos):
                         print("Options Button Clicked")
                     elif quit_btn.is_clicked(event.pos):
                         menu_running = False
+
                 haz1_bld.update(mouse_pos)
                 haz2_bld.update(mouse_pos)
                 haz3_bld.update(mouse_pos)
