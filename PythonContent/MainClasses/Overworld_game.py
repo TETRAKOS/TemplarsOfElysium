@@ -1,6 +1,8 @@
+import numpy
 import pygame
 from Entities import Player, Hostile, Actor, Wall, Loot
 from UIElements import Rectangle, TextRenderer
+import Shaders
 
 
 
@@ -26,7 +28,7 @@ class Grid:
             for x in range(self.width):
                 rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
                                    self.cell_size)
-                pygame.draw.rect(surface, (30, 30, 30), rect, 1)
+                pygame.draw.rect(surface, (12, 43, 17), rect, 1)
 
                 cell_value = self.grid[y][x]
                 if isinstance(cell_value, Actor):
@@ -49,8 +51,15 @@ class Game:
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
         pygame.display.set_caption("Templars of Elysium - Map")
-        self.surface = pygame.display.set_mode((1024, 768))
-        self.bgc = (45, 48, 44)
+        self.surface = pygame.display.set_mode((1024, 724))
+        self.bgc = (20, 25, 27)
+        self.bgcd = (15, 20, 18)
+        self.gradient = Shaders.generate_gradient((45, 48, 44),(0,0,0),1024,724)
+        center = (self.surface.get_width() // 2, self.surface.get_height() // 2)
+        radius = 500#min(self.surface.get_width(), self.surface.get_height()) // 2
+        self.gradient = Shaders.generate_radial_gradient(center, radius, self.bgc, self.bgcd, self.surface.get_height(),
+                                                 self.surface.get_width())
+        self.gradient = numpy.transpose(self.gradient, (1, 0, 2))
         self.camera = [0, 0]
         self.clock = pygame.time.Clock()
         self.grid = Grid(20, 25, 40)
@@ -94,8 +103,12 @@ class Game:
                         self.is_player_turn = False  # End player's turn after moving
                         self.turn_count += 1  # Increment turn count
                         self.handle_enemy_turn()  # Call enemy turn logic
+            #self.gradient = numpy.transpose(self.gradient, (1,0,2))
+            pygame.surfarray.blit_array(
+                self.surface,self.gradient)
+              #  pygame.surfarray.map_array(self.surface,self.gradient)
 
-            self.surface.fill(self.bgc)
+            #self.surface.fill(self.bgc)
             self.update_camera()
             self.grid.draw(self.surface, self.camera)
 
