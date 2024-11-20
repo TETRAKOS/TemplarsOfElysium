@@ -50,7 +50,7 @@ class Game:
         self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
-        pygame.display.set_caption("Templars of Elysium - Map")
+
         self.surface = pygame.display.set_mode((1024, 724))
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
@@ -110,6 +110,9 @@ class Game:
 
             #self.surface.fill(self.bgc)
             self.update_camera()
+            clock = pygame.time.Clock()
+            fps = str(clock.tick(60))
+            pygame.display.set_caption("Templars of Elysium - Map" + fps)
             self.grid.draw(self.surface, self.camera)
 
 
