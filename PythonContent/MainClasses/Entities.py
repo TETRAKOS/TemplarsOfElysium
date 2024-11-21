@@ -20,13 +20,15 @@ class Wall(Actor):
     #def __str__(self):
      #   print("Wall")
 class Player(Actor):
-    def __init__(self, pos, icon):
+    def __init__(self,game, pos, icon):
         super().__init__(pos, icon)
+        self.game = game
         self.inventory = []
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig1.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.resource = 0
         self.name = "You"
+        self.weapon = None
     def handle_input(self, event):
         move = (0,0)
         if event.type == pygame.KEYDOWN:
@@ -39,6 +41,8 @@ class Player(Actor):
             elif event.key == pygame.K_d:
                 move = (1, 0)
         return move
+    def pass_turn(self):
+        self.game.pass_turn()
 class Hostile(Actor):
     def __init__(self, pos, icon):
         super().__init__(pos, icon)

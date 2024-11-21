@@ -1,8 +1,9 @@
-import numpy
+#import numpy
 import pygame
 from Entities import Player, Hostile, Actor, Wall, Loot
 from UIElements import Rectangle, TextRenderer
 import Shaders
+import Items
 
 
 
@@ -54,19 +55,19 @@ class Game:
         self.surface = pygame.display.set_mode((1024, 724))
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
-        self.gradient = Shaders.generate_gradient((45, 48, 44),(0,0,0),1024,724)
+      #  self.gradient = Shaders.generate_gradient((45, 48, 44),(0,0,0),1024,724)
         center = (self.surface.get_width() // 2, self.surface.get_height() // 2)
         radius = 500#min(self.surface.get_width(), self.surface.get_height()) // 2
-        self.gradient = Shaders.generate_radial_gradient(center, radius, self.bgc, self.bgcd, self.surface.get_height(),
-                                                 self.surface.get_width())
-        self.gradient = numpy.transpose(self.gradient, (1, 0, 2))
+       # self.gradient = Shaders.generate_radial_gradient(center, radius, self.bgc, self.bgcd, self.surface.get_height(),
+       #                                          self.surface.get_width())
+       # self.gradient = numpy.transpose(self.gradient, (1, 0, 2))
         self.camera = [0, 0]
         self.clock = pygame.time.Clock()
         self.grid = Grid(20, 25, 40)
         self.setup_grid()
         self.player_pos = [10, 2]
         self.player = Player((self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
-                             "Assets/Sprites/Entities/Creatures/Player/fig1.png")
+                             "Assets/Sprites/Entities/Creatures/Player/fig1.png",self)
 
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         self.enemy = Hostile((5 * self.grid.cell_size, 5 * self.grid.cell_size), "Assets/Sprites/Entities/Creatures/Walker/walker.png")
@@ -91,6 +92,7 @@ class Game:
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
+        weapon_icon = pygame.image.load("Assets/Sprites/Icons/Empty.png")
         running = True
         while running:
             for event in pygame.event.get():
@@ -103,12 +105,9 @@ class Game:
                         self.is_player_turn = False  # End player's turn after moving
                         self.turn_count += 1  # Increment turn count
                         self.handle_enemy_turn()  # Call enemy turn logic
-            #self.gradient = numpy.transpose(self.gradient, (1,0,2))
-            pygame.surfarray.blit_array(
-                self.surface,self.gradient)
-              #  pygame.surfarray.map_array(self.surface,self.gradient)
 
-            #self.surface.fill(self.bgc)
+
+            self.surface.fill(self.bgc)
             self.update_camera()
             clock = pygame.time.Clock()
             fps = str(clock.tick(60))
@@ -142,15 +141,18 @@ class Game:
                     self.surface.blit(text_surface, text_rect)
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
-
+            #UI
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
+            if isinstance(self.player.weapon, Items.Weapon):
 
             pygame.display.flip()
             self.clock.tick(60)
-
+# 1151 > 1200
         pygame.quit()
-
+    def pass_turn(self):
+        print("Turn passed")
+        self.is_player_turn = not self.is_player_turn
     def handle_enemy_turn(self):
         print("Enemy's turn")
         self.is_player_turn = True
