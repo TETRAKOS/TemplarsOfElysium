@@ -12,14 +12,14 @@ class Material(Item):
         super().__init__()
         self.name = "Material"
 class Weapon(Item):
-    def __init__(self, player_ref):
+    def __init__(self,player_ref):
         super().__init__()
         self.player_ref = player_ref
         self.damage = 0
         self.range = 0
 class RangedWeapon(Weapon):
-    def __init__(self):
-        super().__init__()
+    def __init__(self,player_ref):
+        super().__init__(player_ref)
         self.range = 6
         self.damage = 2
         self.ammo = 2
@@ -40,8 +40,8 @@ class RangedWeapon(Weapon):
         if isinstance(self.player_ref, Entities.Player):
             self.player_ref.pass_turn()
 class surv_pistol(RangedWeapon):
-    def __init__(self):
-        super().__init__()
+    def __init__(self,player_ref):
+        super().__init__(player_ref)
         self.damage = 1
         self.range = 4
         self.ammo = 2

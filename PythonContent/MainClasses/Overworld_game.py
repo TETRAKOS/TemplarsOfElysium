@@ -66,8 +66,9 @@ class Game:
         self.grid = Grid(20, 25, 40)
         self.setup_grid()
         self.player_pos = [10, 2]
-        self.player = Player((self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
-                             "Assets/Sprites/Entities/Creatures/Player/fig1.png",self)
+        self.player = Player(self,self.player_pos,
+                             #(self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
+                             "Assets/Sprites/Entities/Creatures/Player/fig1.png")
 
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         self.enemy = Hostile((5 * self.grid.cell_size, 5 * self.grid.cell_size), "Assets/Sprites/Entities/Creatures/Walker/walker.png")
@@ -92,7 +93,10 @@ class Game:
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
-        weapon_icon = pygame.image.load("Assets/Sprites/Icons/Empty.png")
+        weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
+        ammo_text = TextRenderer(self.font_small, (255, 255, 255))
+        self.player.equip_weapon(Items.surv_pistol(self.player))
+        weapon_name = TextRenderer(self.font_small, (255, 255, 255))
         running = True
         while running:
             for event in pygame.event.get():
@@ -105,8 +109,19 @@ class Game:
                         self.is_player_turn = False  # End player's turn after moving
                         self.turn_count += 1  # Increment turn count
                         self.handle_enemy_turn()  # Call enemy turn logic
-
-
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_pos = pygame.mouse.get_pos()
+                        tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
+                        tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
+                        actor = self.grid.get_cell(tile_x, tile_y)
+                        if isinstance(actor, Actor):
+                            actor_event = actor.is_clicked(mouse_pos)
+                            if actor_event == "attack":
+                                self.player.attack(actor)
+                            elif actor_event == "search":
+                                self.player.search()
+                            elif actor_event == "use":
+                                self.player.use(actor, (tile_x,tile_y))
             self.surface.fill(self.bgc)
             self.update_camera()
             clock = pygame.time.Clock()
@@ -145,7 +160,14 @@ class Game:
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
             if isinstance(self.player.weapon, Items.Weapon):
-
+                weapon_icon = pygame.image.load(self.player.weapon.icon)
+                weapon_name.draw_text(self.surface, self.player.weapon.name, (self.surface.get_width()-150, 250), 50)
+                if isinstance(self.player.weapon, Items.RangedWeapon):
+                    ammo_text.draw_text(self.surface, str(self.player.weapon.ammo), (self.surface.get_width()-150, 300), 50)
+            else:
+                weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
+                weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width()-190, 275), 200)
+            self.surface.blit(weapon_icon, (self.surface.get_width()-150, 200))
             pygame.display.flip()
             self.clock.tick(60)
 # 1151 > 1200
@@ -169,6 +191,7 @@ class Game:
             self.player_pos = [new_x, new_y]
             self.grid.set_cell(new_x, new_y, self.player)
             self.player.rect.topleft = (new_x * self.grid.cell_size, new_y * self.grid.cell_size)
+            self.player.pos = [new_x, new_y]
 
 if __name__ == "__main__":
     Game()
