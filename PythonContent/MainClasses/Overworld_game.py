@@ -87,7 +87,7 @@ class Game:
             self.grid.set_cell(0, i, Wall((i * self.grid.cell_size, 0)))
             self.grid.set_cell(19, i, Wall((i * self.grid.cell_size, 0)))
 
-        self.grid.set_cell(7, 7, Loot((5,5),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+        self.grid.set_cell(7, 7, Loot((7,7),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
         self.grid.set_cell(10, 10, Loot((10,10),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
 
     def map_loop(self):
@@ -150,10 +150,14 @@ class Game:
                     distance_y = abs(self.player_pos[1] - tile_y)
                     c_info = max(distance_x, distance_y)
                     c_text = f"Distance: {c_info} cells"
+                    c_data = "weapon range" + str(self.player.weapon.range) if isinstance(self.player.weapon, Items.RangedWeapon) else ""
+                    c_surface = self.font_small.render(c_data, True, (255, 255, 255))
                     text_surface = self.font_small.render(c_text, True, (255, 255, 255))
                     text_rect = text_surface.get_rect(
                         topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
-                    self.surface.blit(text_surface, text_rect)
+                    range_rect = text_surface.get_rect(
+                        topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
+                    self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
             #UI
@@ -175,6 +179,7 @@ class Game:
     def pass_turn(self):
         print("Turn passed")
         self.is_player_turn = not self.is_player_turn
+        self.handle_enemy_turn()
     def handle_enemy_turn(self):
         print("Enemy's turn")
         self.is_player_turn = True

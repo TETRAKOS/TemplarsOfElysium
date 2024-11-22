@@ -1,6 +1,11 @@
 import pygame
+import Items
 #from Overworld_game import Grid
-
+def get_distance_from_actors(actor1,actor2):
+    distance_x = abs(actor1.pos[0] - actor2.pos[0])
+    distance_y = abs(actor1.pos[1] - actor2.pos[1])
+    actor_distance = max(distance_x, distance_y)
+    return actor_distance
 class Actor:
     def __init__(self, pos, icon):
         self.pos = pos
@@ -51,16 +56,21 @@ class Player(Actor):
         self.weapon = weapon
         print(f"Equipped {weapon.name}")
     def attack(self,actor):
-        print(f"You attack {actor.name}")
+        if isinstance(self.weapon, Items.Weapon):
+            if self.weapon.range >= get_distance_from_actors(self, actor):
+                self.weapon.attack(actor)
+                print(f"You attack {actor.name}")
     def search(self):
         print("You search around")
     def use(self,actor, actor_pos):
         if isinstance(actor, Actor) and not isinstance(actor, Hostile):
-            distance_x = abs(self.pos[0] - actor_pos[0])
-            distance_y = abs(self.pos[1] - actor_pos[1])
-            actor_distance = max(distance_x, distance_y)
+            a_distance = get_distance_from_actors(self, actor)
+            print(a_distance, actor.pos)
+            # distance_x = abs(self.pos[0] - actor_pos[0])
+            # distance_y = abs(self.pos[1] - actor_pos[1])
+            # actor_distance = max(distance_x, distance_y)
             print(self.pos[0],self.pos[1])
-            if  actor_distance > 1:
+            if  a_distance > 1:
                 self.observe(actor)
             else:
                 self.interact(actor)
@@ -82,6 +92,12 @@ class Hostile(Actor):
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.name = "hostile"
         self.event = "attack"
+        self.health = 5
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            print(f"{self.name} is dead")
+            #self.game.remove_entity(self)
 class Walker(Hostile):
     def __init__(self, pos):
         super().__init__(pos, "Assets/Sprites/Entities/Creatures/Walker/walker.png")

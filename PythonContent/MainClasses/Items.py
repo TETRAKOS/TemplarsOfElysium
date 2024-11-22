@@ -17,6 +17,8 @@ class Weapon(Item):
         self.player_ref = player_ref
         self.damage = 0
         self.range = 0
+    def attack(self, actor):
+        pass
 class RangedWeapon(Weapon):
     def __init__(self,player_ref):
         super().__init__(player_ref)
@@ -25,6 +27,8 @@ class RangedWeapon(Weapon):
         self.ammo = 2
         self.name = "ranged Weapon"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+    def attack(self, actor):
+        self.fire_at(actor)
     def fire_at(self, enemy):
         if self.ammo > 0:
             self.ammo -= 1
