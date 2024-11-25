@@ -1,48 +1,10 @@
 #import numpy
 import pygame
-from Entities import Player, Hostile, Actor, Wall, Loot
+from Entities import Player, Hostile, Actor, Loot
 from UIElements import Rectangle, TextRenderer, Button
-import Shaders
+#import Shaders
 import Items
 import MapGen
-
-
-
-class Grid:
-    def __init__(self, width, height, cell_size):
-        self.width = width
-        self.height = height
-        self.cell_size = cell_size
-        self.grid = [[None for _ in range(width)] for _ in range(height)]
-
-    def set_cell(self, x, y, value):
-        if 0 <= x < self.width and 0 <= y < self.height:
-            self.grid[y][x] = value
-          #  print(self.grid[y][x])
-
-    def get_cell(self, x, y):
-        if 0 <= x < self.width and 0 <= y < self.height:
-            return self.grid[y][x]
-        return None
-
-    def draw(self, surface, camera):
-        for y in range(self.height):
-            for x in range(self.width):
-                rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
-                                   self.cell_size)
-                pygame.draw.rect(surface, (12, 43, 17), rect, 1)
-
-                cell_value = self.grid[y][x]
-                if isinstance(cell_value, Actor):
-                    surface.blit(cell_value.icon, rect)
-    def get_actors(self):
-        actors = []
-        for y in range(self.height):
-            for x in range(self.width):
-                cell_value = self.grid[y][x]
-                if isinstance(cell_value, Actor):
-                    actors.append(cell_value)
-        return actors
 
 class Game:
     def __init__(self):
@@ -57,8 +19,8 @@ class Game:
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
       #  self.gradient = Shaders.generate_gradient((45, 48, 44),(0,0,0),1024,724)
-        center = (self.surface.get_width() // 2, self.surface.get_height() // 2)
-        radius = 500#min(self.surface.get_width(), self.surface.get_height()) // 2
+        #center = (self.surface.get_width() // 2, self.surface.get_height() // 2)
+        #radius = 500#min(self.surface.get_width(), self.surface.get_height()) // 2
        # self.gradient = Shaders.generate_radial_gradient(center, radius, self.bgc, self.bgcd, self.surface.get_height(),
        #                                          self.surface.get_width())
        # self.gradient = numpy.transpose(self.gradient, (1, 0, 2))
@@ -66,8 +28,8 @@ class Game:
         self.clock = pygame.time.Clock()
         self.grid = MapGen.Grid(40, 40, 40)
         self.grid.generate_dungeon()
-   #     self.setup_grid()
-        self.player_pos = [10, 2]
+        self.player_pos = self.grid.get_starting_point()
+        self.setup_grid()
         self.player = Player(self,self.player_pos,
                              #(self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
                              "Assets/Sprites/Entities/Creatures/Player/fig1.png")
@@ -82,25 +44,19 @@ class Game:
         self.map_loop()
 
     def setup_grid(self):
-        for i in range(25):
-            self.grid.set_cell(i, 0, Wall((i * self.grid.cell_size, 0)))
-            self.grid.set_cell(i, 24, Wall((i * self.grid.cell_size, 0)))
-        for i in range(15):
-            self.grid.set_cell(0, i, Wall((i * self.grid.cell_size, 0)))
-            self.grid.set_cell(19, i, Wall((i * self.grid.cell_size, 0)))
-
         self.grid.set_cell(7, 7, Loot((7,7),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
-        self.grid.set_cell(10, 10, Loot((10,10),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+        self.grid.set_cell(self.player_pos[0]+2,self.player_pos[1]+2, Loot((self.player_pos[0]+2,self.player_pos[1]+2),"Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
 
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
-        weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
+        #weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
         ammo_text = TextRenderer(self.font_small, (255, 255, 255))
-        self.player.equip_weapon(Items.surv_pistol(self.player))
+      #  self.player.equip_weapon(Items.surv_pistol(self.player))
         weapon_name = TextRenderer(self.font_small, (255, 255, 255))
-        reload_button = Button("Reload",(self.surface.get_width()-155, 350),(50,50),self.font_small)
-        weapon_mode = Button("Weapon Mode",(self.surface.get_width()-95,350),(50,50),self.font_small)
+        reload_button = Button("Reload",(self.surface.get_width()-175, 350),(75,50),self.font_small)
+        weapon_mode = Button("Weapon Mode",(self.surface.get_width()-85,350),(75,50),self.font_small)
+        inventory_btn = Button("Inventory",(self.surface.get_width()-175,500),(150,50),self.font_small)
         running = True
         while running:
             for event in pygame.event.get():
@@ -131,6 +87,8 @@ class Game:
                                 self.player.weapon.reload()
                         elif weapon_mode.is_clicked(mouse_pos):
                             print("Weapon Mode")
+                        elif inventory_btn.is_clicked(mouse_pos):
+                            self.player.render_inventory(self.surface)
             self.surface.fill(self.bgc)
             self.update_camera()
             clock = pygame.time.Clock()
@@ -154,7 +112,7 @@ class Game:
                 if isinstance(actor, Loot):
                     pygame.mouse.set_cursor(pygame.cursors.ball)
                 if isinstance(actor, Hostile):
-                    pygame.mouse.set_cursor(pygame.cursors.diamond)
+#                    pygame.mouse.set_cursor(pygame.cursors.diamond)
                     distance_x = abs(self.player_pos[0] - tile_x)
                     distance_y = abs(self.player_pos[1] - tile_y)
                     c_info = max(distance_x, distance_y)
@@ -169,7 +127,7 @@ class Game:
                     self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
             else:
                 pass
-      #          pygame.mouse.set_cursor(pygame.cursors.arrow)
+                pygame.mouse.set_cursor(pygame.cursors.arrow)
             #UI
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -184,6 +142,7 @@ class Game:
                 weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
                 weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width()-190, 275), 200)
             weapon_mode.draw(self.surface)
+            inventory_btn.draw(self.surface)
             self.surface.blit(weapon_icon, (self.surface.get_width()-150, 200))
             pygame.display.flip()
             self.clock.tick(60)

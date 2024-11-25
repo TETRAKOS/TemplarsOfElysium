@@ -52,3 +52,9 @@ class surv_pistol(RangedWeapon):
         self.ammo = 2
         self.name = "Survival Pistol"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+class shard(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Shard"
+        self.description = "A shard of unknown metal."
+        self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/Shard.png")

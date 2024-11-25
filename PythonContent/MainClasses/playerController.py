@@ -9,6 +9,6 @@ class Controller:
         """Return the hexagon that was clicked based on mouse position."""
         for row in self.hexagons:
             for hexagon in row:
-               if is_mouse_over_hexagon(mouse_pos, hexagon):
+               if s_mouse_over_hexagon(mouse_pos, hexagon):
                     return hexagon
         return None

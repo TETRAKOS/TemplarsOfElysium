@@ -1,5 +1,6 @@
 import pygame
 import Items
+import UIElements
 #from Overworld_game import Grid
 def get_distance_from_actors(actor1,actor2):
     distance_x = abs(actor1.pos[0] - actor2.pos[0])
@@ -65,7 +66,7 @@ class Player(Actor):
     def use(self,actor, actor_pos):
         if isinstance(actor, Actor) and not isinstance(actor, Hostile):
             a_distance = get_distance_from_actors(self, actor)
-            print(a_distance, actor.pos)
+        #    print(a_distance, actor.pos)
             # distance_x = abs(self.pos[0] - actor_pos[0])
             # distance_y = abs(self.pos[1] - actor_pos[1])
             # actor_distance = max(distance_x, distance_y)
@@ -85,6 +86,9 @@ class Player(Actor):
             print(f"You using {actor.name}")
         else:
             print("incorrect Actor Type")
+    def render_inventory(self, game_surface):
+        inv_backdrop = UIElements.Rectangle(((game_surface.get_width() - 200), 0), (200, game_surface.get_height()), (70, 70, 70))
+        inv_backdrop.draw(game_surface)
 class Hostile(Actor):
     def __init__(self, pos, icon):
         super().__init__(pos, icon)
