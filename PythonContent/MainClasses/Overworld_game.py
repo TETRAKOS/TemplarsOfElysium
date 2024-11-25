@@ -1,9 +1,10 @@
 #import numpy
 import pygame
 from Entities import Player, Hostile, Actor, Wall, Loot
-from UIElements import Rectangle, TextRenderer
+from UIElements import Rectangle, TextRenderer, Button
 import Shaders
 import Items
+import MapGen
 
 
 
@@ -63,8 +64,9 @@ class Game:
        # self.gradient = numpy.transpose(self.gradient, (1, 0, 2))
         self.camera = [0, 0]
         self.clock = pygame.time.Clock()
-        self.grid = Grid(20, 25, 40)
-        self.setup_grid()
+        self.grid = MapGen.Grid(40, 40, 40)
+        self.grid.generate_dungeon()
+   #     self.setup_grid()
         self.player_pos = [10, 2]
         self.player = Player(self,self.player_pos,
                              #(self.player_pos[0] * self.grid.cell_size, self.player_pos[1] * self.grid.cell_size),
@@ -97,6 +99,8 @@ class Game:
         ammo_text = TextRenderer(self.font_small, (255, 255, 255))
         self.player.equip_weapon(Items.surv_pistol(self.player))
         weapon_name = TextRenderer(self.font_small, (255, 255, 255))
+        reload_button = Button("Reload",(self.surface.get_width()-155, 350),(50,50),self.font_small)
+        weapon_mode = Button("Weapon Mode",(self.surface.get_width()-95,350),(50,50),self.font_small)
         running = True
         while running:
             for event in pygame.event.get():
@@ -122,6 +126,11 @@ class Game:
                                 self.player.search()
                             elif actor_event == "use":
                                 self.player.use(actor, (tile_x,tile_y))
+                        elif reload_button.is_clicked(mouse_pos):
+                            if isinstance(self.player.weapon, Items.RangedWeapon):
+                                self.player.weapon.reload()
+                        elif weapon_mode.is_clicked(mouse_pos):
+                            print("Weapon Mode")
             self.surface.fill(self.bgc)
             self.update_camera()
             clock = pygame.time.Clock()
@@ -150,16 +159,17 @@ class Game:
                     distance_y = abs(self.player_pos[1] - tile_y)
                     c_info = max(distance_x, distance_y)
                     c_text = f"Distance: {c_info} cells"
-                    c_data = "weapon range" + str(self.player.weapon.range) if isinstance(self.player.weapon, Items.RangedWeapon) else ""
+                    c_data = "weapon range " + str(self.player.weapon.range) if isinstance(self.player.weapon, Items.RangedWeapon) else ""
                     c_surface = self.font_small.render(c_data, True, (255, 255, 255))
-                    text_surface = self.font_small.render(c_text, True, (255, 255, 255))
+                    text_surface = self.font_small.render(c_text, True, (100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
                     text_rect = text_surface.get_rect(
                         topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
                     range_rect = text_surface.get_rect(
                         topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
                     self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
             else:
-                pygame.mouse.set_cursor(pygame.cursors.arrow)
+                pass
+      #          pygame.mouse.set_cursor(pygame.cursors.arrow)
             #UI
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -168,9 +178,12 @@ class Game:
                 weapon_name.draw_text(self.surface, self.player.weapon.name, (self.surface.get_width()-150, 250), 50)
                 if isinstance(self.player.weapon, Items.RangedWeapon):
                     ammo_text.draw_text(self.surface, str(self.player.weapon.ammo), (self.surface.get_width()-150, 300), 50)
+                    reload_button.draw(self.surface)
+
             else:
                 weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
                 weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width()-190, 275), 200)
+            weapon_mode.draw(self.surface)
             self.surface.blit(weapon_icon, (self.surface.get_width()-150, 200))
             pygame.display.flip()
             self.clock.tick(60)

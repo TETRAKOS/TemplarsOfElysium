@@ -25,6 +25,7 @@ class RangedWeapon(Weapon):
         self.range = 6
         self.damage = 2
         self.ammo = 2
+        self.max_ammo = 2
         self.name = "ranged Weapon"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
     def attack(self, actor):
@@ -39,7 +40,7 @@ class RangedWeapon(Weapon):
         else:
             print("No ammo left!")
     def reload(self):
-        self.ammo = 2
+        self.ammo = self.max_ammo
         print("Reloaded!")
         if isinstance(self.player_ref, Entities.Player):
             self.player_ref.pass_turn()
