@@ -28,19 +28,43 @@ class Wall(Actor):
 
     #def __str__(self):
      #   print("Wall")
+class Inventory_component:
+    def __init__(self, actor_ref):
+        self.actor_ref = actor_ref
+        self.items = []
+
+    def add_item(self, item):
+        self.items.append(item)
+        print(f"Added {item.name} to inventory")
+
+    def remove_item(self, item):
+        if item in self.items:
+            self.items.remove(item)
+            print(f"Removed {item.name} from inventory")
+
+    def equip_weapon(self, weapon):
+        if isinstance(weapon, Items.Weapon):
+            if isinstance(self.actor_ref, Player):
+                self.actor_ref.equip_weapon(weapon)
+
+    def use_item(self, item):
+        if isinstance(item, Items.Item):
+            item.use(self)
+
 class Player(Actor):
-    def __init__(self,game, pos, icon):
+    def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
         self.game = game
-        self.inventory = []
+        self.inventory = Inventory_component(self)
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig1.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.resource = 0
         self.name = "You"
         self.weapon = None
         self.event = "search"
+
     def handle_input(self, event):
-        move = (0,0)
+        move = (0, 0)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_w:
                 move = (0, -1)
@@ -51,44 +75,53 @@ class Player(Actor):
             elif event.key == pygame.K_d:
                 move = (1, 0)
         return move
+
     def pass_turn(self):
         self.game.pass_turn()
+
     def equip_weapon(self, weapon):
         self.weapon = weapon
         print(f"Equipped {weapon.name}")
-    def attack(self,actor):
+
+    def attack(self, actor):
         if isinstance(self.weapon, Items.Weapon):
             if self.weapon.range >= get_distance_from_actors(self, actor):
                 self.weapon.attack(actor)
                 print(f"You attack {actor.name}")
+
     def search(self):
         print("You search around")
-    def use(self,actor, actor_pos):
+
+    def use(self, actor):
         if isinstance(actor, Actor) and not isinstance(actor, Hostile):
             a_distance = get_distance_from_actors(self, actor)
-        #    print(a_distance, actor.pos)
-            # distance_x = abs(self.pos[0] - actor_pos[0])
-            # distance_y = abs(self.pos[1] - actor_pos[1])
-            # actor_distance = max(distance_x, distance_y)
-            print(self.pos[0],self.pos[1])
-            if  a_distance > 1:
+            if a_distance > 1:
                 self.observe(actor)
             else:
                 self.interact(actor)
-        #print(f"You use {actor.name}")
+
     def observe(self, actor):
         if isinstance(actor, Actor):
             print(f"you looked at {actor.name}, it's too far to reach")
         else:
             print("incorrect Actor Type")
+
     def interact(self, actor):
         if isinstance(actor, Actor):
             print(f"You using {actor.name}")
         else:
             print("incorrect Actor Type")
+
     def render_inventory(self, game_surface):
         inv_backdrop = UIElements.Rectangle(((game_surface.get_width() - 200), 0), (200, game_surface.get_height()), (70, 70, 70))
         inv_backdrop.draw(game_surface)
+        y_offset = 50
+        print("inventory drawn")
+        for item in self.inventory.items:
+            item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
+            item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
+            y_offset += 30
+
 class Hostile(Actor):
     def __init__(self, pos, icon):
         super().__init__(pos, icon)
@@ -107,7 +140,16 @@ class Walker(Hostile):
         super().__init__(pos, "Assets/Sprites/Entities/Creatures/Walker/walker.png")
         self.name = "Walker"
 class Loot(Actor):
-    def __init__(self, pos, icon):
+    def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
-        self.items = []
+        self.game = game
+        self.items = [Items.Shard(), Items.surv_pistol(None)]  # Add items to the loot
         self.name = "Bag with goods"
+
+    def is_clicked(self, mouse_pos):
+        if self.rect.collidepoint(mouse_pos):
+            for item in self.items:
+                self.game.player.inventory.add_item(item)
+            self.items = []  # Clear the loot after picking up
+            return "use"
+        return None

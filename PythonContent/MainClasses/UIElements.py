@@ -168,3 +168,6 @@ class Rectangle:
 
     def draw(self, surface):
         pygame.draw.rect(surface, self.color, self.rect)
+
+    def is_mouse_over(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)

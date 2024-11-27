@@ -155,18 +155,6 @@ class Shell:
         if state == "Info":
             info_btn.set_enabled(False)
         return raid_btn,tech_btn,units_btn,info_btn
-    # def Run_shell(self):
-    #     running = True
-    #     while running:
-    #         for event in pygame.event.get():
-    #              if event.type == pygame.QUIT:
-    #                  running = False
-    #              if event.type == pygame.MOUSEBUTTONDOWN:
-    #                  if
-    #         self.surface.fill(self.bgc)
-    #         pygame.display.flip()
-    # def load_save(self):
-    #     pass
     def tech_menu(self):
         raid_b, tech_b, gear_b, info_b = self.low_buttons_array('Tech')
         t_running=True

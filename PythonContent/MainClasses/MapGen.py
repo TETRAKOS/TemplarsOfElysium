@@ -79,20 +79,6 @@ class Grid:
             for j in range(x, x + width):
                 self.set_cell(j, i, '.')  # Set floor tile
 
-
-        # for i in range(y - 1, y + height + 1):
-        #     if i >= 0 and i < self.height:
-        #         if x - 1 >= 0:
-        #             self.set_cell(x - 1, i, Entities.Wall((x - 1, i)))  # Left wall
-        #         if x + width < self.width:
-        #             self.set_cell(x + width, i, Entities.Wall((x + width, i)))  # Right wall
-        # for j in range(x - 1, x + width + 1):
-        #     if j >= 0 and j < self.width:
-        #         if y - 1 >= 0:
-        #             self.set_cell(j, y - 1, Entities.Wall((j, y - 1)))  # Top wall
-        #         if y + height < self.height:
-        #             self.set_cell(j, y + height, Entities.Wall((j, y + height)))  # Bottom wall
-
     def encase_rooms(self):
         for y in range(self.height):
             for x in range(self.width):
@@ -126,34 +112,10 @@ class Grid:
         for x in range(min(x1, x2), max(x1, x2) + 1):
             self.set_cell(x, y, '.')  # Set floor tile
 
-
-            #if y - 1 >= 0:
-            #     for x in range(min(x1, x2), max(x1, x2) + 1):
-            #         self.set_cell(x, y - 1, Entities.Wall((x, y - 1)))  # Top wall
-            # if y + 1 < self.height:
-            #     for x in range(min(x1, x2), max(x1, x2) + 1):
-            #         self.set_cell(x, y + 1, Entities.Wall((x, y + 1)))  # Bottom wall
-            # if x1 - 1 >= 0:
-            #         self.set_cell(x1 - 1, y, None)  # Left end wall
-            # if x2 + 1 < self.width:
-            #         self.set_cell(x2 + 1, y, None)
-
     def draw_vertical_corridor(self, y1, y2, x):
         # Draw the corridor
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.set_cell(x, y, '.')  # Set floor tile
-
-    #     if x - 1 >= 0:
-    #         for y in range(min(y1, y2), max(y1, y2) + 1):
-    #             self.set_cell(x - 1, y, Entities.Wall((x - 1, y)))  # Left wall
-    #     if x + 1 < self.width:
-    #         for y in range(min(y1, y2), max(y1, y2) + 1):
-    #             self.set_cell(x + 1, y, Entities.Wall((x + 1, y)))  # Right wall
-    #     if y1 - 1 >= 0:
-    #         self.set_cell(x, y1 - 1, None)  # Top end wall
-    #     if y2 + 1 < self.height:
-    #         self.set_cell(x, y2 + 1, None)
-    #
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x] = value
