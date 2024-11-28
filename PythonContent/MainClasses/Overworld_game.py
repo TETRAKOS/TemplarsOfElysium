@@ -121,11 +121,9 @@ class Game:
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
             # UI
-            if inventory_open:
-                self.player.render_inventory(self.surface)
+
      #           print("inventoryOpened")
-            else:
-                pass
+
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
             if isinstance(self.player.weapon, Items.Weapon):
@@ -141,6 +139,8 @@ class Game:
             weapon_mode.draw(self.surface)
             inventory_btn.draw(self.surface)
             self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 200))
+            if inventory_open:
+                self.player.render_inventory(self.surface)
             pygame.display.flip()
             self.clock.tick(60)
 
