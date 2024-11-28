@@ -1,11 +1,11 @@
 #import numpy
 import pygame
+import Entities
 from Entities import Player, Hostile, Actor, Loot
 from UIElements import Rectangle, TextRenderer, Button
 #import Shaders
 import Items
 import MapGen
-
 class Game:
     def __init__(self):
         pygame.init()
@@ -20,7 +20,7 @@ class Game:
         self.bgcd = (15, 20, 18)
         self.camera = [0, 0]
         self.clock = pygame.time.Clock()
-        self.grid = MapGen.Grid(40, 40, 40)
+        self.grid = MapGen.Grid(80, 80, 40)
         self.grid.generate_dungeon()
         self.player_pos = self.grid.get_starting_point()
         self.setup_grid()
@@ -32,6 +32,8 @@ class Game:
 
         self.turn_count = 0
         self.is_player_turn = True
+
+        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
 
         self.map_loop()
 
@@ -46,7 +48,7 @@ class Game:
         weapon_name = TextRenderer(self.font_small, (255, 255, 255))
         reload_button = Button("Reload", (self.surface.get_width() - 175, 350), (75, 50), self.font_small)
         weapon_mode = Button("Weapon Mode", (self.surface.get_width() - 85, 350), (75, 50), self.font_small)
-        inventory_btn = Button("Inventory", (self.surface.get_width() - 175, 500), (150, 50), self.font_small)
+        inventory_btn = Button("Inventory", (self.surface.get_width() - 175, 650), (150, 50), self.font_small)
         running = True
         inventory_open = False
         self.player.inventory.add_item(Items.Shard())
@@ -75,6 +77,7 @@ class Game:
                             elif actor_event == "search":
                                 self.player.search()
                             elif actor_event == "use":
+
                                 self.player.use(actor)#, (tile_x, tile_y))
                         elif reload_button.is_clicked(mouse_pos):
                             if isinstance(self.player.weapon, Items.RangedWeapon):
@@ -83,13 +86,18 @@ class Game:
                             print("Weapon Mode")
                         elif inventory_btn.is_clicked(mouse_pos):
                             inventory_open = not inventory_open
+                            if inventory_open:
+                                inventory_btn.text = "Close"
+                            else:
+                                inventory_btn.text = "Inventory"
 
             self.surface.fill(self.bgc)
             self.update_camera()
+            self.update_visibility()  # Update visibility
             clock = pygame.time.Clock()
             fps = str(clock.tick(60))
             pygame.display.set_caption("Templars of Elysium - Map" + fps)
-            self.grid.draw(self.surface, self.camera)
+            self.grid.draw(self.surface, self.camera, self.visibility_grid)
 
             backdrop.draw(self.surface)
             mouse_pos = pygame.mouse.get_pos()
@@ -137,11 +145,13 @@ class Game:
                 weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
                 weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width() - 190, 275), 200)
             weapon_mode.draw(self.surface)
-            inventory_btn.draw(self.surface)
+
             self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 200))
             if inventory_open:
                 self.player.render_inventory(self.surface)
+            inventory_btn.draw(self.surface)
             pygame.display.flip()
+
             self.clock.tick(60)
 
         pygame.quit()
@@ -169,6 +179,37 @@ class Game:
             self.player.rect.topleft = (new_x * self.grid.cell_size, new_y * self.grid.cell_size)
             self.player.pos = [new_x, new_y]
 
+    def flood_fill(self, start_x, start_y, grid, radius):
+        queue = [(start_x, start_y, 0)]  # Start with the player's position and a distance of 0
+        visible_tiles = set()
+        visited = set()
+
+        while queue:
+            x, y, distance = queue.pop(0)
+            if (x, y) in visited or distance > radius:  # Stop if the tile has been visited or the distance exceeds the radius
+                continue
+            visited.add((x, y))
+            visible_tiles.add((x, y))
+
+            for dx in [-1, 0, 1]:
+                for dy in [-1, 0, 1]:
+                    if dx == 0 and dy == 0:
+                        continue
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < grid.width and 0 <= ny < grid.height:
+                        cell = grid.get_cell(nx, ny)
+                        if isinstance(cell, Entities.Wall):
+                            visible_tiles.add((nx, ny))  # Add the wall to visible tiles
+                        elif not isinstance(cell, Entities.Wall) and (nx, ny) not in visited:
+                            queue.append((nx, ny, distance + 1))  # Increment the distance for the next tile
+
+        return visible_tiles
+
+    def update_visibility(self):
+        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
+        visible_tiles = self.flood_fill(self.player_pos[0], self.player_pos[1], self.grid, 7)  # Adjust radius as needed
+        for (x, y) in visible_tiles:
+            self.visibility_grid[y][x] = True
+
 if __name__ == "__main__":
     Game()
-gameloop = Game

@@ -68,6 +68,6 @@ class surv_pistol(RangedWeapon):
 class Shard(Item):
     def __init__(self):
         super().__init__()
-        self.name = "Shard"
+        self.name = "Metal shard"
         self.description = "A shard of unknown metal."
         self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/Shard.png")

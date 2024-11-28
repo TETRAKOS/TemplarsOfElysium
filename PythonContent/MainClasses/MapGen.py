@@ -2,9 +2,9 @@ import pygame
 import random
 import Entities
 
-ROOM_COUNT = 12
-ROOM_MIN_SIZE = 5
-ROOM_MAX_SIZE = 10
+ROOM_COUNT = 32
+ROOM_MIN_SIZE = 7
+ROOM_MAX_SIZE = 12
 
 class Grid:
     def __init__(self, width, height, cell_size):
@@ -40,6 +40,7 @@ class Grid:
             #c_room = self.find_closest_room(self.rooms[i])
             self.connect_rooms(self.rooms[i-1], self.rooms[i])
         self.encase_rooms()
+
     def get_starting_point(self):
         room = self.rooms[0]
         x = (room[0])
@@ -125,18 +126,19 @@ class Grid:
             return self.grid[y][x]
         return None
 
-    def draw(self, surface, camera):
+    def draw(self, surface, camera, visibility_grid):
         for y in range(self.height):
             for x in range(self.width):
-                rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
-                                   self.cell_size)
-                cell_value = self.grid[y][x]
+                if visibility_grid[y][x]:
+                    rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
+                                       self.cell_size)
+                    cell_value = self.grid[y][x]
 
-                if cell_value == '.':
-                   pygame.draw.rect(surface, (50, 50, 50), rect)
+                    if cell_value == '.':
+                        pygame.draw.rect(surface, (50, 50, 50), rect)
 
-                if isinstance(cell_value, Entities.Actor):
-                    surface.blit(cell_value.icon, rect)
+                    if isinstance(cell_value, Entities.Actor):
+                        surface.blit(cell_value.icon, rect)
 
     def get_actors(self):
         actors = []

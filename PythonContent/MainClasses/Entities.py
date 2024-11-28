@@ -20,10 +20,13 @@ class Actor:
         return self.name
     def is_clicked(self, mouse_pos):
         return self.event#self.rect.collidepoint(mouse_pos)
+    def event_use(self, actor):
+        print(f"used by{actor}")
+        pass
 
 class Wall(Actor):
     def __init__(self, pos):
-        super().__init__(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_default.png")
+        super().__init__(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")
         self.name = "Concrete wall"
 
     #def __str__(self):
@@ -62,6 +65,7 @@ class Player(Actor):
         self.name = "You"
         self.weapon = None
         self.event = "search"
+
 
     def handle_input(self, event):
         move = (0, 0)
@@ -109,6 +113,7 @@ class Player(Actor):
     def interact(self, actor):
         if isinstance(actor, Actor):
             print(f"You using {actor.name}")
+            actor.event_use(self)
         else:
             print("incorrect Actor Type")
 
@@ -116,11 +121,12 @@ class Player(Actor):
         inv_backdrop = UIElements.Rectangle(((game_surface.get_width() - 200), 0), (200, game_surface.get_height()), (70, 70, 70))
         inv_backdrop.draw(game_surface)
         y_offset = 50
-        print("inventory drawn")
+     #   print("inventory drawn")
         for item in self.inventory.items:
             item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
             item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
             y_offset += 30
+
 
 class Hostile(Actor):
     def __init__(self, pos, icon):
@@ -145,11 +151,13 @@ class Loot(Actor):
         self.game = game
         self.items = [Items.Shard(), Items.surv_pistol(None)]  # Add items to the loot
         self.name = "Bag with goods"
+        self.enabled = True
 
     def is_clicked(self, mouse_pos):
-        if self.rect.collidepoint(mouse_pos):
+        if self.enabled:
             for item in self.items:
-                self.game.player.inventory.add_item(item)
-            self.items = []  # Clear the loot after picking up
-            return "use"
-        return None
+                    self.game.player.inventory.add_item(item)
+            self.enabled = False
+            self.icon = pygame.image.load("Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png")
+            #self.items = []  # Clear the loot after picking up
+        return "use"
