@@ -155,7 +155,7 @@ class Loot(Actor):
         self.name = "Bag with goods"
         self.enabled = True
 
-    def is_clicked(self, mouse_pos):
+    def event_use(self,player):
         if self.enabled:
             for item in self.items:
                     self.game.player.inventory.add_item(item)
