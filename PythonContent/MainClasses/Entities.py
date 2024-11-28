@@ -59,7 +59,7 @@ class Player(Actor):
         super().__init__(pos, icon)
         self.game = game
         self.inventory = Inventory_component(self)
-        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig1.png")
+        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_east.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.resource = 0
         self.name = "You"
@@ -75,8 +75,10 @@ class Player(Actor):
             elif event.key == pygame.K_s:
                 move = (0, 1)
             elif event.key == pygame.K_a:
+                self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_west.png")
                 move = (-1, 0)
             elif event.key == pygame.K_d:
+                self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_east.png")
                 move = (1, 0)
         return move
 

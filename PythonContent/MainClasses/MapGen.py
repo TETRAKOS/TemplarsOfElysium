@@ -15,12 +15,12 @@ class Grid:
         self.rooms = []
 
     def generate_dungeon(self):
-        for x in range(self.width):
-            self.set_cell(x, 0, Entities.Wall((x, 0)))
-            self.set_cell(x, self.height - 1, Entities.Wall((x, self.height - 1)))
-        for y in range(self.height):
-            self.set_cell(0, y, Entities.Wall((0, y)))
-            self.set_cell(self.width - 1, y, Entities.Wall((self.width - 1, y)))
+        # for x in range(self.width):
+        #     self.set_cell(x, 0, Entities.Wall((x, 0)))
+        #     self.set_cell(x, self.height - 1, Entities.Wall((x, self.height - 1)))
+        # for y in range(self.height):
+        #     self.set_cell(0, y, Entities.Wall((0, y)))
+        #     self.set_cell(self.width - 1, y, Entities.Wall((self.width - 1, y)))
 
         self.rooms = []
 
