@@ -113,7 +113,7 @@ class Game:
                 self.surface.blit(text_surface, text_rect)
                 if isinstance(actor, Loot):
                     pygame.mouse.set_cursor(pygame.cursors.ball)
-                if isinstance(actor, Hostile):
+                if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
                     distance_x = abs(self.player_pos[0] - tile_x)
                     distance_y = abs(self.player_pos[1] - tile_y)
                     c_info = max(distance_x, distance_y)
