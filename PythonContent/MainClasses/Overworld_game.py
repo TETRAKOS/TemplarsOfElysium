@@ -1,4 +1,3 @@
-#import numpy
 import pygame
 import Entities
 from Entities import Player, Hostile, Actor, Loot
@@ -65,8 +64,8 @@ class Game:
                         self.handle_enemy_turn()
                     if event.type == pygame.MOUSEBUTTONDOWN:
                         mouse_pos = pygame.mouse.get_pos()
-                     #   if backdrop.is_mouse_over(mouse_pos) or reload_button.is_clicked(mouse_pos) or weapon_mode.is_clicked(mouse_pos) or inventory_btn.is_clicked(mouse_pos):
-                     #       continue
+                        if inventory_open:
+                            self.player.handle_inventory_click(mouse_pos)
                         tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
                         tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
                         actor = self.grid.get_cell(tile_x, tile_y)
@@ -106,7 +105,8 @@ class Game:
             tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
 
             actor = self.grid.get_cell(tile_x, tile_y)
-            if isinstance(actor, Actor):
+           # print(self.visibility_grid[10][3])
+            if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
                 info_text = actor.getinfo()
                 text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
                 text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
@@ -180,13 +180,13 @@ class Game:
             self.player.pos = [new_x, new_y]
 
     def flood_fill(self, start_x, start_y, grid, radius):
-        queue = [(start_x, start_y, 0)]  # Start with the player's position and a distance of 0
+        queue = [(start_x, start_y, 0)]
         visible_tiles = set()
         visited = set()
 
         while queue:
             x, y, distance = queue.pop(0)
-            if (x, y) in visited or distance > radius:  # Stop if the tile has been visited or the distance exceeds the radius
+            if (x, y) in visited or distance > radius:
                 continue
             visited.add((x, y))
             visible_tiles.add((x, y))
@@ -199,15 +199,15 @@ class Game:
                     if 0 <= nx < grid.width and 0 <= ny < grid.height:
                         cell = grid.get_cell(nx, ny)
                         if isinstance(cell, Entities.Wall):
-                            visible_tiles.add((nx, ny))  # Add the wall to visible tiles
+                            visible_tiles.add((nx, ny))
                         elif not isinstance(cell, Entities.Wall) and (nx, ny) not in visited:
-                            queue.append((nx, ny, distance + 1))  # Increment the distance for the next tile
+                            queue.append((nx, ny, distance + 1))  # +1 для стен
 
         return visible_tiles
 
     def update_visibility(self):
         self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        visible_tiles = self.flood_fill(self.player_pos[0], self.player_pos[1], self.grid, 7)  # Adjust radius as needed
+        visible_tiles = self.flood_fill(self.player_pos[0], self.player_pos[1], self.grid, 7)  # радиус обзора
         for (x, y) in visible_tiles:
             self.visibility_grid[y][x] = True
 

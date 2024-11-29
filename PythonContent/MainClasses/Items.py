@@ -6,7 +6,8 @@ class Item:
         self.name = "Unknown"
         self.description = "No description provided."
         self.icon = None
-
+    def call_menu(self, inventory_ref):
+        pass
     def use(self, inventory_ref):
         inventory_ref.remove_item(self)
         print(f"Used {self.name}!")

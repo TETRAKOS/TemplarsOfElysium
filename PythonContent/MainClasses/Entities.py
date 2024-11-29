@@ -25,8 +25,8 @@ class Actor:
         pass
 
 class Wall(Actor):
-    def __init__(self, pos):
-        super().__init__(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")
+    def __init__(self, pos, sprite_path):
+        super().__init__(pos, sprite_path)
         self.name = "Concrete wall"
 
     #def __str__(self):
@@ -123,11 +123,28 @@ class Player(Actor):
         inv_backdrop = UIElements.Rectangle(((game_surface.get_width() - 200), 0), (200, game_surface.get_height()), (70, 70, 70))
         inv_backdrop.draw(game_surface)
         y_offset = 50
-     #   print("inventory drawn")
         for item in self.inventory.items:
             item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
             item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
             y_offset += 30
+
+    def handle_inventory_click(self, mouse_pos):
+        y_offset = 50
+        for item in self.inventory.items:
+            item_rect = pygame.Rect((self.game.surface.get_width() - 190, y_offset), (190, 30))
+            if item_rect.collidepoint(mouse_pos):
+                self.inventory.use_item(item)
+                return
+            y_offset += 30
+
+class Use_menu:
+    def __init__(self,item,pos,surface):
+        self.item = item
+        self.pos = pos
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+        self.surface = surface
+        self.use_button = UIElements.Button("use", pos, (50, 50), self.font)
+        self.discard_button = UIElements.Button("discard",pos - (50,0),(75,50),self.font)
 
 
 class Hostile(Actor):

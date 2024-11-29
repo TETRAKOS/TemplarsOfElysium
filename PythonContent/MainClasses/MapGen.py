@@ -15,13 +15,6 @@ class Grid:
         self.rooms = []
 
     def generate_dungeon(self):
-        # for x in range(self.width):
-        #     self.set_cell(x, 0, Entities.Wall((x, 0)))
-        #     self.set_cell(x, self.height - 1, Entities.Wall((x, self.height - 1)))
-        # for y in range(self.height):
-        #     self.set_cell(0, y, Entities.Wall((0, y)))
-        #     self.set_cell(self.width - 1, y, Entities.Wall((self.width - 1, y)))
-
         self.rooms = []
 
         for i in range(ROOM_COUNT):
@@ -85,13 +78,13 @@ class Grid:
             for x in range(self.width):
                 if self.get_cell(x, y) == '.':
                     if x - 1 >= 0 and self.get_cell(x - 1, y) is None:  # Left
-                        self.set_cell(x - 1, y, Entities.Wall((x - 1, y)))
+                        self.set_cell(x - 1, y, self.get_wall_sprite((x - 1, y)))
                     if x + 1 < self.width and self.get_cell(x + 1, y) is None:  # Right
-                        self.set_cell(x + 1, y, Entities.Wall((x + 1, y)))
+                        self.set_cell(x + 1, y, self.get_wall_sprite((x + 1, y)))
                     if y - 1 >= 0 and self.get_cell(x, y - 1) is None:  # Top
-                        self.set_cell(x, y - 1, Entities.Wall((x, y - 1)))
+                        self.set_cell(x, y - 1, self.get_wall_sprite((x, y - 1)))
                     if y + 1 < self.height and self.get_cell(x, y + 1) is None:  # Bottom
-                        self.set_cell(x, y + 1, Entities.Wall((x, y + 1)))
+                        self.set_cell(x, y + 1, self.get_wall_sprite((x, y + 1)))
 
     def connect_rooms(self, room1, room2):
         x1, y1, _, _ = room1
@@ -133,10 +126,8 @@ class Grid:
                     rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
                                        self.cell_size)
                     cell_value = self.grid[y][x]
-
                     if cell_value == '.':
                         pygame.draw.rect(surface, (50, 50, 50), rect)
-
                     if isinstance(cell_value, Entities.Actor):
                         surface.blit(cell_value.icon, rect)
 
@@ -149,3 +140,41 @@ class Grid:
                     actors.append(cell_value)
         return actors
 
+    def get_wall_sprite(self, pos):
+        x, y = pos
+        neighbors = [
+            self.get_cell(x - 1, y),  # Left
+            self.get_cell(x + 1, y),  # Right
+            self.get_cell(x, y - 1),  # Top
+            self.get_cell(x, y + 1)    # Bottom
+        ]
+        if neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None or '.' and neighbors[3] is None or '.':
+            return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")  # Horizontal long
+        #if neighbors[0] and neighbors[1] is Entities.Wall:
+        #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_center.png") # Center (alone)
+        #elif neighbors[0] and neighbors[1] is Entities.Wall:
+         #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")
+        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_dl.png")  # Top corner
+        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_lu.png")  # Bottom corner
+        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_dr.png")  # Left corner
+        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_ur.png")  # Right corner
+        # elif all(neighbor is not None for neighbor in neighbors):
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_full.png")  # Full
+        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")  # Horizontal long
+        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_f.png")  # Vertical long
+        # elif neighbors[0] is not None and neighbors[1] is None and neighbors[2] is None and neighbors[3] is not None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_hu.png")  # Vertical end top
+        # elif neighbors[0] is None and neighbors[1] is not None and neighbors[2] is not None and neighbors[3] is None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_hd.png")  # Vertical end bottom
+        # elif neighbors[0] is not None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_hl.png")  # Horizontal end left
+        # elif neighbors[0] is None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is not None:
+        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_hr.png")  # Horizontal end right
+        #    else:
+        #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default
