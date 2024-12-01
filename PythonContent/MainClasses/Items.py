@@ -1,5 +1,6 @@
 import pygame
 import Entities
+import time
 
 class Item:
     def __init__(self):
@@ -37,15 +38,20 @@ class RangedWeapon(Weapon):
         self.max_ammo = 2
         self.name = "ranged Weapon"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+        pygame.mixer.init()
+      #  self.fire_sfx = pygame.mixer.music.load("Assets/Sound/sfx/smallarms_fire/sm1.wav")
 
     def attack(self, actor):
         self.fire_at(actor)
+
 
     def fire_at(self, enemy):
         if self.ammo > 0:
             self.ammo -= 1
             enemy.take_damage(self.damage)
             print(f"Fired at {enemy.name} for {self.damage} damage!")
+            pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+            pygame.mixer.music.play()
             if isinstance(self.player_ref, Entities.Player):
                 self.player_ref.pass_turn()
         else:
@@ -54,8 +60,11 @@ class RangedWeapon(Weapon):
     def reload(self):
         self.ammo = self.max_ammo
         print("Reloaded!")
+        pygame.mixer.music.load("Assets/Sound/sfx/small_reload/smReload.wav")
+        pygame.mixer.music.play()
         if isinstance(self.player_ref, Entities.Player):
             self.player_ref.pass_turn()
+
 
 class surv_pistol(RangedWeapon):
     def __init__(self, player_ref):
@@ -65,6 +74,22 @@ class surv_pistol(RangedWeapon):
         self.ammo = 2
         self.name = "Survival Pistol"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+
+class smg(RangedWeapon):
+    def __init__(self, player_ref):
+        super().__init__(player_ref)
+        self.damage = 2
+        self.range = 5
+        self.ammo = 30
+        self.max_ammo = 30
+        self.name = "SMG"
+        self.icon = "Assets/Sprites/Items/Weapons/smg.png"
+    def attack(self, actor):
+        for i in range(3):
+            self.fire_at(actor)
+            pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+            pygame.mixer.music.play()
+            time.sleep(0.075)
 
 class Shard(Item):
     def __init__(self):

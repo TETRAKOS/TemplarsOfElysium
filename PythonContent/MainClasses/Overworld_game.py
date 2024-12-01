@@ -26,14 +26,21 @@ class Game:
         self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
 
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
-        self.enemy = Hostile((5 * self.grid.cell_size, 5 * self.grid.cell_size), "Assets/Sprites/Entities/Creatures/Walker/walker.png")
-        self.grid.set_cell(5, 5, Hostile((5, 5), "Assets/Sprites/Entities/Creatures/Walker/walker.png"))
-
+        self.enemies = []
+        for y in range(self.grid.height):
+            for x in range(self.grid.width):
+                cell = self.grid.get_cell(x, y)
+                if isinstance(cell, Hostile):
+                    cell.game = self  # Set the game reference for the enemy
+                    self.enemies.append(cell)
+        #print(self.enemies)
+        self.enemy = Hostile(self, (5 * self.grid.cell_size, 5 * self.grid.cell_size),
+                             "Assets/Sprites/Entities/Creatures/Walker/walker.png")
+        # self.grid.set_cell(5, 5, Hostile((5, 5), "Assets/Sprites/Entities/Creatures/Walker/walker.png"))
         self.turn_count = 0
         self.is_player_turn = True
-
         self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-
+        self.popup = None  # Initialize popup as None
         self.map_loop()
 
     def setup_grid(self):
@@ -51,6 +58,7 @@ class Game:
         running = True
         inventory_open = False
         self.player.inventory.add_item(Items.Shard())
+        self.popup = None
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -66,6 +74,16 @@ class Game:
                         mouse_pos = pygame.mouse.get_pos()
                         if inventory_open:
                             self.player.handle_inventory_click(mouse_pos)
+                            if self.popup:
+                                action = self.popup.handle_click(mouse_pos)
+                                if action == "use":
+                                    if isinstance(self.popup.item, Items.Weapon):
+                                        self.player.equip_weapon(self.popup.item)
+                                    else:
+                                        self.player.inventory.use_item(self.popup.item)
+                                elif action == "discard":
+                                    self.player.inventory.remove_item(self.popup.item)
+                                self.popup = None
                         tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
                         tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
                         actor = self.grid.get_cell(tile_x, tile_y)
@@ -76,8 +94,7 @@ class Game:
                             elif actor_event == "search":
                                 self.player.search()
                             elif actor_event == "use":
-
-                                self.player.use(actor)#, (tile_x, tile_y))
+                                self.player.use(actor)
                         elif reload_button.is_clicked(mouse_pos):
                             if isinstance(self.player.weapon, Items.RangedWeapon):
                                 self.player.weapon.reload()
@@ -105,7 +122,6 @@ class Game:
             tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
 
             actor = self.grid.get_cell(tile_x, tile_y)
-           # print(self.visibility_grid[10][3])
             if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
                 info_text = actor.getinfo()
                 text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
@@ -128,9 +144,6 @@ class Game:
                     self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
-            # UI
-
-     #           print("inventoryOpened")
 
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -150,6 +163,8 @@ class Game:
             if inventory_open:
                 self.player.render_inventory(self.surface)
             inventory_btn.draw(self.surface)
+            if self.popup:
+                self.popup.draw()
             pygame.display.flip()
 
             self.clock.tick(60)
@@ -163,7 +178,11 @@ class Game:
 
     def handle_enemy_turn(self):
         print("Enemy's turn")
+        for enemy in self.enemies:
+            if enemy.alive:
+                enemy.take_turn((self.player_pos[0], self.player_pos[1]))
         self.is_player_turn = True
+
 
     def update_camera(self):
         self.camera[0] = self.player_pos[0] * self.grid.cell_size - self.surface.get_width() // 2 + self.grid.cell_size // 2
@@ -178,6 +197,7 @@ class Game:
             self.grid.set_cell(new_x, new_y, self.player)
             self.player.rect.topleft = (new_x * self.grid.cell_size, new_y * self.grid.cell_size)
             self.player.pos = [new_x, new_y]
+            print(self.player.pos)
 
     def flood_fill(self, start_x, start_y, grid, radius):
         queue = [(start_x, start_y, 0)]
@@ -202,7 +222,6 @@ class Game:
                             visible_tiles.add((nx, ny))
                         elif not isinstance(cell, Entities.Wall) and (nx, ny) not in visited:
                             queue.append((nx, ny, distance + 1))  # +1 для стен
-
         return visible_tiles
 
     def update_visibility(self):

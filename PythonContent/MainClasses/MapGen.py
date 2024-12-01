@@ -2,6 +2,7 @@ import pygame
 import random
 import Entities
 
+
 ROOM_COUNT = 32
 ROOM_MIN_SIZE = 7
 ROOM_MAX_SIZE = 12
@@ -11,7 +12,7 @@ class Grid:
         self.width = width
         self.height = height
         self.cell_size = cell_size
-        self.grid = [[None for _ in range(width)] for _ in range(height)]
+        self.grid = [[[] for _ in range(width)] for _ in range(height)]
         self.rooms = []
 
     def generate_dungeon(self):
@@ -22,13 +23,12 @@ class Grid:
             room_height = random.randint(ROOM_MIN_SIZE, ROOM_MAX_SIZE)
             x = random.randint(1, self.width - room_width - 2)
             y = random.randint(1, self.height - room_height - 2)
-
+            self.set_cell(x, y, Entities.Hostile(self,(x,y),"Assets/Sprites/Entities/Creatures/walker/walker.png"))
             new_room = (x, y, room_width, room_height)
             if any(self.overlap(new_room, r) for r in self.rooms):
                 continue
             self.add_room(new_room)
             self.rooms.append(new_room)
-
         for i in range(1, len(self.rooms)):
             #c_room = self.find_closest_room(self.rooms[i])
             self.connect_rooms(self.rooms[i-1], self.rooms[i])
@@ -110,14 +110,15 @@ class Grid:
         # Draw the corridor
         for y in range(min(y1, y2), max(y1, y2) + 1):
             self.set_cell(x, y, '.')  # Set floor tile
+
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
-            self.grid[y][x] = value
+            self.grid[y][x].append(value)
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.grid[y][x]
-        return None
+        return []
 
     def draw(self, surface, camera, visibility_grid):
         for y in range(self.height):
@@ -125,19 +126,22 @@ class Grid:
                 if visibility_grid[y][x]:
                     rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
                                        self.cell_size)
-                    cell_value = self.grid[y][x]
-                    if cell_value == '.':
-                        pygame.draw.rect(surface, (50, 50, 50), rect)
-                    if isinstance(cell_value, Entities.Actor):
-                        surface.blit(cell_value.icon, rect)
+                    cell_values = self.grid[y][x]
+                    if cell_values:
+                        most_recent_value = cell_values[-1]
+                        if most_recent_value == '.':
+                            pygame.draw.rect(surface, (50, 50, 50), rect)
+                        if isinstance(most_recent_value, Entities.Actor):
+                            surface.blit(most_recent_value.icon, rect)
 
     def get_actors(self):
         actors = []
         for y in range(self.height):
             for x in range(self.width):
-                cell_value = self.grid[y][x]
-                if isinstance(cell_value, Entities.Actor):
-                    actors.append(cell_value)
+                cell_values = self.grid[y][x]
+                for value in cell_values:
+                    if isinstance(value, Entities.Actor):
+                        actors.append(value)
         return actors
 
     def get_wall_sprite(self, pos):
@@ -146,35 +150,13 @@ class Grid:
             self.get_cell(x - 1, y),  # Left
             self.get_cell(x + 1, y),  # Right
             self.get_cell(x, y - 1),  # Top
-            self.get_cell(x, y + 1)    # Bottom
+            self.get_cell(x, y + 1)  # Bottom
         ]
-        if neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None or '.' and neighbors[3] is None or '.':
-            return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")  # Horizontal long
-        #if neighbors[0] and neighbors[1] is Entities.Wall:
-        #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_center.png") # Center (alone)
-        #elif neighbors[0] and neighbors[1] is Entities.Wall:
-         #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")
-        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_dl.png")  # Top corner
-        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_lu.png")  # Bottom corner
-        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_dr.png")  # Left corner
-        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_corner_ur.png")  # Right corner
-        # elif all(neighbor is not None for neighbor in neighbors):
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_full.png")  # Full
-        # elif neighbors[0] is not None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_f.png")  # Horizontal long
-        # elif neighbors[0] is None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is not None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_f.png")  # Vertical long
-        # elif neighbors[0] is not None and neighbors[1] is None and neighbors[2] is None and neighbors[3] is not None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_hu.png")  # Vertical end top
-        # elif neighbors[0] is None and neighbors[1] is not None and neighbors[2] is not None and neighbors[3] is None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_vert_hd.png")  # Vertical end bottom
-        # elif neighbors[0] is not None and neighbors[1] is None and neighbors[2] is not None and neighbors[3] is None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_hl.png")  # Horizontal end left
-        # elif neighbors[0] is None and neighbors[1] is not None and neighbors[2] is None and neighbors[3] is not None:
-        #      return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Directional/w_hor_hr.png")  # Horizontal end right
-        #    else:
-        #    return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default
+
+        # Check if neighbors are walls
+        left_wall = any(isinstance(item, Entities.Wall) for item in neighbors[0])
+        right_wall = any(isinstance(item, Entities.Wall) for item in neighbors[1])
+        top_wall = any(isinstance(item, Entities.Wall) for item in neighbors[2])
+        bottom_wall = any(isinstance(item, Entities.Wall) for item in neighbors[3])
+
+        return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default wall

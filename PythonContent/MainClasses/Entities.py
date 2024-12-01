@@ -1,6 +1,9 @@
 import pygame
 import Items
 import UIElements
+import heapq
+
+
 #from Overworld_game import Grid
 def get_distance_from_actors(actor1,actor2):
     distance_x = abs(actor1.pos[0] - actor2.pos[0])
@@ -128,38 +131,124 @@ class Player(Actor):
             item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
             y_offset += 30
 
+
     def handle_inventory_click(self, mouse_pos):
         y_offset = 50
         for item in self.inventory.items:
             item_rect = pygame.Rect((self.game.surface.get_width() - 190, y_offset), (190, 30))
             if item_rect.collidepoint(mouse_pos):
-                self.inventory.use_item(item)
+                self.game.popup = InventoryPopup(item, (mouse_pos[0], mouse_pos[1]), self.game.surface)
                 return
             y_offset += 30
 
-class Use_menu:
-    def __init__(self,item,pos,surface):
+class InventoryPopup:
+    def __init__(self, item, pos, surface):
         self.item = item
         self.pos = pos
-        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
         self.surface = surface
-        self.use_button = UIElements.Button("use", pos, (50, 50), self.font)
-        self.discard_button = UIElements.Button("discard",pos - (50,0),(75,50),self.font)
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+        self.use_button = UIElements.Button("Use", (pos[0], pos[1]), (50, 50), self.font)
+        self.discard_button = UIElements.Button("Discard", (pos[0] - 60, pos[1]), (75, 50), self.font)
+
+    def draw(self):
+        self.use_button.draw(self.surface)
+        self.discard_button.draw(self.surface)
+
+    def handle_click(self, mouse_pos):
+        if self.use_button.is_clicked(mouse_pos):
+            return "use"
+        elif self.discard_button.is_clicked(mouse_pos):
+            return "discard"
+        return None
 
 
 class Hostile(Actor):
-    def __init__(self, pos, icon):
+    def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
+        self.game = game  # Store the game reference
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Walker/walker.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.name = "hostile"
         self.event = "attack"
         self.health = 5
+        self.alive = True  # Add an alive attribute
+
     def take_damage(self, damage):
         self.health -= damage
         if self.health <= 0:
             print(f"{self.name} is dead")
-            #self.game.remove_entity(self)
+            self.death()
+
+    def death(self):
+        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Dead/dead.png")
+        self.alive = False  # Set alive to False when the enemy dies
+
+    def take_turn(self, player_pos):
+        if self.alive:
+            distance = max(abs(self.pos[0] - player_pos[0]), abs(self.pos[1] - player_pos[1]))
+            if distance <= 7:
+                path = self.find_path(player_pos)
+                if path:
+                    self.move_towards(path)
+
+    def find_path(self, target_pos):
+        def heuristic(a, b):
+            return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+        def get_neighbors(node):
+            neighbors = []
+            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                x, y = node[0] + dx, node[1] + dy
+                if 0 <= x < self.game.grid.width and 0 <= y < self.game.grid.height:
+                    cell = self.game.grid.get_cell(x, y)
+                    if cell is None or (isinstance(cell, Actor) and not isinstance(cell, Wall)):
+                        neighbors.append((x, y))
+            return neighbors
+
+        start = tuple(self.pos)
+        target = tuple(target_pos)
+        open_set = []
+        heapq.heappush(open_set, (0, start))
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: heuristic(start, target)}
+
+        print(f"Start: {start}, Target: {target}")
+
+        while open_set:
+            current = heapq.heappop(open_set)[1]
+            print(f"Current: {current}")
+
+            if current == target:
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.reverse()
+                print(f"Found path: {path}")
+                return path
+
+            for neighbor in get_neighbors(current):
+                tentative_g_score = g_score[current] + 1
+                print(f"Neighbor: {neighbor}, Tentative g_score: {tentative_g_score}")
+                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                    came_from[neighbor] = current
+                    g_score[neighbor] = tentative_g_score
+                    f_score[neighbor] = tentative_g_score + heuristic(neighbor, target)
+                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
+                    print(f"Added {neighbor} to open_set with f_score {f_score[neighbor]}")
+
+        print("No path found")
+        return None
+
+    def move_towards(self, path):
+        if path:
+            next_pos = path[0]
+            self.game.grid.set_cell(self.pos[0], self.pos[1], None)  # Clear old position
+            self.pos = list(next_pos)
+            self.game.grid.set_cell(self.pos[0], self.pos[1], self)
+            self.rect.topleft = (self.pos[0] * self.game.grid.cell_size, self.pos[1] * self.game.grid.cell_size)
+            print(f"{self.name} moved to {self.pos}")
 class Walker(Hostile):
     def __init__(self, pos):
         super().__init__(pos, "Assets/Sprites/Entities/Creatures/Walker/walker.png")
@@ -168,7 +257,7 @@ class Loot(Actor):
     def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
         self.game = game
-        self.items = [Items.Shard(), Items.surv_pistol(None)]  # Add items to the loot
+        self.items = [Items.Shard(), Items.smg(None), Items.surv_pistol(None)]  # Add items to the loot
         self.name = "Bag with goods"
         self.enabled = True
 
