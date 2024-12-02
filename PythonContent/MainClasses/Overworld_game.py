@@ -45,7 +45,9 @@ class Game:
 
     def setup_grid(self):
         self.grid.set_cell(7, 7, Loot(self, (7, 7), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
-        self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2, Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+        self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
+                           Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2),
+                                "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
 
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
@@ -86,16 +88,17 @@ class Game:
                                 self.popup = None
                         tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
                         tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
-                        actor = self.grid.get_cell(tile_x, tile_y)
-                        if isinstance(actor, Actor):
-                            actor_event = actor.is_clicked(mouse_pos)
-                            if actor_event == "attack":
-                                self.player.attack(actor)
-                            elif actor_event == "search":
-                                self.player.search()
-                            elif actor_event == "use":
-                                self.player.use(actor)
-                        elif reload_button.is_clicked(mouse_pos):
+                        cell_values = self.grid.get_cell(tile_x, tile_y)
+                        for actor in cell_values:
+                            if isinstance(actor, Actor):
+                                actor_event = actor.is_clicked(mouse_pos)
+                                if actor_event == "attack":
+                                    self.player.attack(actor)
+                                elif actor_event == "search":
+                                    self.player.search()
+                                elif actor_event == "use":
+                                    self.player.use(actor)
+                        if reload_button.is_clicked(mouse_pos):
                             if isinstance(self.player.weapon, Items.RangedWeapon):
                                 self.player.weapon.reload()
                         elif weapon_mode.is_clicked(mouse_pos):
@@ -121,27 +124,28 @@ class Game:
             tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
             tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
 
-            actor = self.grid.get_cell(tile_x, tile_y)
-            if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
-                info_text = actor.getinfo()
-                text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
-                text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
-                self.surface.blit(text_surface, text_rect)
-                if isinstance(actor, Loot):
-                    pygame.mouse.set_cursor(pygame.cursors.ball)
-                if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
-                    distance_x = abs(self.player_pos[0] - tile_x)
-                    distance_y = abs(self.player_pos[1] - tile_y)
-                    c_info = max(distance_x, distance_y)
-                    c_text = f"Distance: {c_info} cells"
-                    c_data = "weapon range " + str(self.player.weapon.range) if isinstance(self.player.weapon, Items.RangedWeapon) else ""
-                    c_surface = self.font_small.render(c_data, True, (255, 255, 255))
-                    text_surface = self.font_small.render(c_text, True, (100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
-                    text_rect = text_surface.get_rect(
-                        topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
-                    range_rect = text_surface.get_rect(
-                        topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
-                    self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
+            cell_values = self.grid.get_cell(tile_x, tile_y)
+            for actor in cell_values:
+                if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
+                    info_text = actor.getinfo()
+                    text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
+                    text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
+                    self.surface.blit(text_surface, text_rect)
+                    if isinstance(actor, Loot):
+                        pygame.mouse.set_cursor(pygame.cursors.ball)
+                    if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
+                        distance_x = abs(self.player_pos[0] - tile_x)
+                        distance_y = abs(self.player_pos[1] - tile_y)
+                        c_info = max(distance_x, distance_y)
+                        c_text = f"Distance: {c_info} cells"
+                        c_data = "weapon range " + str(self.player.weapon.range) if isinstance(self.player.weapon,
+                                                                                               Items.RangedWeapon) else ""
+                        c_surface = self.font_small.render(c_data, True, (255, 255, 255))
+                        text_surface = self.font_small.render(c_text, True, (
+                        100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
+                        text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
+                        range_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
+                        self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
 
@@ -151,7 +155,8 @@ class Game:
                 weapon_icon = pygame.image.load(self.player.weapon.icon)
                 weapon_name.draw_text(self.surface, self.player.weapon.name, (self.surface.get_width() - 150, 250), 50)
                 if isinstance(self.player.weapon, Items.RangedWeapon):
-                    ammo_text.draw_text(self.surface, str(self.player.weapon.ammo), (self.surface.get_width() - 150, 300), 50)
+                    ammo_text.draw_text(self.surface, str(self.player.weapon.ammo),
+                                        (self.surface.get_width() - 150, 300), 50)
                     reload_button.draw(self.surface)
 
             else:
@@ -191,44 +196,64 @@ class Game:
     def move_player(self, move):
         new_x = self.player_pos[0] + move[0]
         new_y = self.player_pos[1] + move[1]
-        if not isinstance(self.grid.get_cell(new_x, new_y), Actor):
-            self.grid.set_cell(self.player_pos[0], self.player_pos[1], None)  # Clear old position
+        cell_values = self.grid.get_cell(new_x, new_y)
+        if not any(isinstance(item, Actor) for item in cell_values):
+            #self.grid.set_cell(self.player_pos[0], self.player_pos[1], None) deprecated method
+            self.grid.remove_from_cell(self.player_pos[0], self.player_pos[1],self.player)
             self.player_pos = [new_x, new_y]
             self.grid.set_cell(new_x, new_y, self.player)
             self.player.rect.topleft = (new_x * self.grid.cell_size, new_y * self.grid.cell_size)
             self.player.pos = [new_x, new_y]
-            print(self.player.pos)
+            print(self.player.pos, self.grid.get_cell(self.player_pos[0], self.player_pos[1]))
 
-    def flood_fill(self, start_x, start_y, grid, radius):
-        queue = [(start_x, start_y, 0)]
-        visible_tiles = set()
-        visited = set()
-
-        while queue:
-            x, y, distance = queue.pop(0)
-            if (x, y) in visited or distance > radius:
-                continue
-            visited.add((x, y))
-            visible_tiles.add((x, y))
-
-            for dx in [-1, 0, 1]:
-                for dy in [-1, 0, 1]:
-                    if dx == 0 and dy == 0:
-                        continue
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < grid.width and 0 <= ny < grid.height:
-                        cell = grid.get_cell(nx, ny)
-                        if isinstance(cell, Entities.Wall):
-                            visible_tiles.add((nx, ny))
-                        elif not isinstance(cell, Entities.Wall) and (nx, ny) not in visited:
-                            queue.append((nx, ny, distance + 1))  # +1 для стен
-        return visible_tiles
-
+    # def flood_fill(self, start_x, start_y, grid, radius):
+    #     queue = [(start_x, start_y, 0)]
+    #     visible_tiles = set()
+    #     visited = set()
+    #
+    #     while queue:
+    #         x, y, distance = queue.pop(0)
+    #         if (x, y) in visited or distance > radius:
+    #             continue
+    #         visited.add((x, y))
+    #         visible_tiles.add((x, y))
+    #
+    #         for dx in [-1, 0, 1]:
+    #             for dy in [-1, 0, 1]:
+    #                 if dx == 0 and dy == 0:
+    #                     continue
+    #                 nx, ny = x + dx, y + dy
+    #                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
+    #                     cell_contents = grid.get_cell(nx, ny)
+    #                     wall = grid.cell_contains(nx, ny, Entities.Wall)
+    #                     if wall:
+    #                         visible_tiles.add((nx, ny))
+    #                     elif not wall and (nx, ny) not in visited:
+    #                         queue.append((nx, ny, distance + 1))
+    #     return visible_tiles
+    #
     def update_visibility(self):
-        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        visible_tiles = self.flood_fill(self.player_pos[0], self.player_pos[1], self.grid, 7)  # радиус обзора
-        for (x, y) in visible_tiles:
-            self.visibility_grid[y][x] = True
+        visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
+        flood_fill(self.grid, self.player_pos, visibility_grid)
+
+def flood_fill(grid, start_pos, visibility_grid):
+        def is_valid(x, y):
+            return 0 <= x < grid.width and 0 <= y < grid.height
+
+        def is_wall(x, y):
+            cell_values = grid.get_cell(x, y)
+            return any(isinstance(item, Entities.Wall) for item in cell_values)
+
+        stack = [start_pos]
+        while stack:
+            x, y = stack.pop()
+            if is_valid(x, y) and not visibility_grid[y][x]:
+                visibility_grid[y][x] = True
+                if not is_wall(x, y):
+                    stack.append((x + 1, y))
+                    stack.append((x - 1, y))
+                    stack.append((x, y + 1))
+                    stack.append((x, y - 1))
 
 if __name__ == "__main__":
     Game()

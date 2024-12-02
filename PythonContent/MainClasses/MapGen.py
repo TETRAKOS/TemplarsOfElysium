@@ -76,14 +76,15 @@ class Grid:
     def encase_rooms(self):
         for y in range(self.height):
             for x in range(self.width):
-                if self.get_cell(x, y) == '.':
-                    if x - 1 >= 0 and self.get_cell(x - 1, y) is None:  # Left
+                if self.cell_contains(x, y,'.'):
+              #      print("cell contains")
+                    if x - 1 >= 0 and self.cell_contains(x - 1, y,".") is None:  # Left
                         self.set_cell(x - 1, y, self.get_wall_sprite((x - 1, y)))
-                    if x + 1 < self.width and self.get_cell(x + 1, y) is None:  # Right
+                    if x + 1 < self.width and self.cell_contains(x + 1, y,".") is None:  # Right
                         self.set_cell(x + 1, y, self.get_wall_sprite((x + 1, y)))
-                    if y - 1 >= 0 and self.get_cell(x, y - 1) is None:  # Top
+                    if y - 1 >= 0 and self.cell_contains(x, y - 1,".") is None:  # Top
                         self.set_cell(x, y - 1, self.get_wall_sprite((x, y - 1)))
-                    if y + 1 < self.height and self.get_cell(x, y + 1) is None:  # Bottom
+                    if y + 1 < self.height and self.cell_contains(x, y + 1,".") is None:  # Bottom
                         self.set_cell(x, y + 1, self.get_wall_sprite((x, y + 1)))
 
     def connect_rooms(self, room1, room2):
@@ -114,11 +115,26 @@ class Grid:
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x].append(value)
+    def remove_from_cell(self,x,y, actor):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid[y][x].remove(actor)
+
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
             return self.grid[y][x]
         return []
+    def cell_contains(self, x, y, value):
+        cell = self.get_cell(x, y)
+        for item in cell:
+            if isinstance(item, type(value)) or item == value:
+                print(item)
+                return item
+        return None
+        #     return value in self.get_cell(x, y)
+        # else:
+        #     return None
+
 
     def draw(self, surface, camera, visibility_grid):
         for y in range(self.height):
