@@ -213,7 +213,7 @@ class Game:
 
     def cast_rays(self):
         player_x, player_y = self.player_pos
-        for angle in range(0, 360, 2):  # raycast by 2 degrees \ head direction mb?
+        for angle in range(0, 360, 1):  # raycast by 2 degrees \ head direction mb?
             self.cast_ray(player_x, player_y, math.radians(angle))
 
     def cast_ray(self, start_x, start_y, angle):

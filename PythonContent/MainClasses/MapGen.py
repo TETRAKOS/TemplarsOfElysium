@@ -7,6 +7,20 @@ ROOM_COUNT = 32
 ROOM_MIN_SIZE = 7
 ROOM_MAX_SIZE = 12
 
+def sorting_key(value):
+    if isinstance(value, Entities.Player):
+        return 0
+    elif isinstance(value, Entities.Hostile):
+        return 1
+    elif isinstance(value, Entities.Actor):
+        return 2
+    elif isinstance(value, Entities.Wall):
+        return 3
+    elif isinstance(value, str):
+        return 4
+    else:
+        return 5
+
 class Grid:
     def __init__(self, width, height, cell_size):
         self.width = width
@@ -115,10 +129,14 @@ class Grid:
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x].append(value)
+            self.sort_cell(x, y)
     def remove_from_cell(self,x,y, actor):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x].remove(actor)
-    def sort_cell(self,x,y):
+
+    def sort_cell(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid[y][x].sort(key=sorting_key)
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -144,7 +162,7 @@ class Grid:
                                        self.cell_size)
                     cell_values = self.grid[y][x]
                     if cell_values:
-                        most_recent_value = cell_values[-1]
+                        most_recent_value = cell_values[0]
                         if most_recent_value == '.':
                             pygame.draw.rect(surface, (50, 50, 50), rect)
                         if isinstance(most_recent_value, Entities.Actor):
