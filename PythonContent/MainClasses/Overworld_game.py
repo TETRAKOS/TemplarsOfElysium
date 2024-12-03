@@ -5,6 +5,7 @@ from UIElements import Rectangle, TextRenderer, Button
 #import Shaders
 import Items
 import MapGen
+import math
 class Game:
     def __init__(self):
         pygame.init()
@@ -40,7 +41,7 @@ class Game:
         self.turn_count = 0
         self.is_player_turn = True
         self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        self.popup = None  # Initialize popup as None
+        self.vision_radius = 10  # Adjust this value to change the player's vision range        self.popup = None  # Initialize popup as None
         self.map_loop()
 
     def setup_grid(self):
@@ -206,37 +207,39 @@ class Game:
             self.player.pos = [new_x, new_y]
             print(self.player.pos, self.grid.get_cell(self.player_pos[0], self.player_pos[1]))
 
-    # def flood_fill(self, start_x, start_y, grid, radius):
-    #     queue = [(start_x, start_y, 0)]
-    #     visible_tiles = set()
-    #     visited = set()
-    #
-    #     while queue:
-    #         x, y, distance = queue.pop(0)
-    #         if (x, y) in visited or distance > radius:
-    #             continue
-    #         visited.add((x, y))
-    #         visible_tiles.add((x, y))
-    #
-    #         for dx in [-1, 0, 1]:
-    #             for dy in [-1, 0, 1]:
-    #                 if dx == 0 and dy == 0:
-    #                     continue
-    #                 nx, ny = x + dx, y + dy
-    #                 if 0 <= nx < grid.width and 0 <= ny < grid.height:
-    #                     cell_contents = grid.get_cell(nx, ny)
-    #                     wall = grid.cell_contains(nx, ny, Entities.Wall)
-    #                     if wall:
-    #                         visible_tiles.add((nx, ny))
-    #                     elif not wall and (nx, ny) not in visited:
-    #                         queue.append((nx, ny, distance + 1))
-    #     return visible_tiles
-    #
     def update_visibility(self):
-        visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        flood_fill(self.grid, self.player_pos, visibility_grid)
+        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
+        self.cast_rays()
 
-def flood_fill(grid, start_pos, visibility_grid):
+    def cast_rays(self):
+        player_x, player_y = self.player_pos
+        for angle in range(0, 360, 2):  # raycast by 2 degrees \ head direction mb?
+            self.cast_ray(player_x, player_y, math.radians(angle))
+
+    def cast_ray(self, start_x, start_y, angle):
+        dx = math.cos(angle)
+        dy = math.sin(angle)
+
+        for i in range(self.vision_radius):
+            x = int(start_x + dx * i)
+            y = int(start_y + dy * i)
+
+            if not self.is_valid(x, y):
+                break
+
+            self.visibility_grid[y][x] = True
+
+            if self.is_wall(x, y):
+                break
+
+    def is_valid(self, x, y):
+        return 0 <= x < self.grid.width and 0 <= y < self.grid.height
+
+    def is_wall(self, x, y):
+        cell_values = self.grid.get_cell(x, y)
+        return any(isinstance(item, Entities.Wall) for item in cell_values)
+
+def flood_fill(grid, start_pos, visibility_grid): #deprecated
         def is_valid(x, y):
             return 0 <= x < grid.width and 0 <= y < grid.height
 

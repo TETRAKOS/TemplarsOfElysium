@@ -118,7 +118,7 @@ class Grid:
     def remove_from_cell(self,x,y, actor):
         if 0 <= x < self.width and 0 <= y < self.height:
             self.grid[y][x].remove(actor)
-
+    def sort_cell(self,x,y):
 
     def get_cell(self, x, y):
         if 0 <= x < self.width and 0 <= y < self.height:
