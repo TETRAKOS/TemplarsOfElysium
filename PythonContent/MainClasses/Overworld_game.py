@@ -132,6 +132,12 @@ class Game:
                     text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
                     text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
                     self.surface.blit(text_surface, text_rect)
+                    pygame.draw.line(self.surface, (255,255,255),
+                                     (self.player_pos[0] * self.grid.cell_size - self.camera[
+                                         0] + self.grid.cell_size // 2,
+                                      self.player_pos[1] * self.grid.cell_size - self.camera[
+                                          1] + self.grid.cell_size // 2),
+                                     mouse_pos)
                     if isinstance(actor, Loot):
                         pygame.mouse.set_cursor(pygame.cursors.ball)
                     if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
