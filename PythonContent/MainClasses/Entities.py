@@ -244,7 +244,7 @@ class Hostile(Actor):
     def move_towards(self, path):
         if path:
             next_pos = path[0]
-            self.game.grid.set_cell(self.pos[0], self.pos[1], None)  # Clear old position
+            self.game.grid.set_cell(self.pos[0], self.pos[1], None)
             self.pos = list(next_pos)
             self.game.grid.set_cell(self.pos[0], self.pos[1], self)
             self.rect.topleft = (self.pos[0] * self.game.grid.cell_size, self.pos[1] * self.game.grid.cell_size)
@@ -257,7 +257,7 @@ class Loot(Actor):
     def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
         self.game = game
-        self.items = [Items.Shard(), Items.smg(None), Items.surv_pistol(None)]  # Add items to the loot
+        self.items = [Items.Shard(), Items.smg(game.get_player_charater()), Items.surv_pistol(game.get_player_charater())]  # loot
         self.name = "Bag with goods"
         self.enabled = True
 

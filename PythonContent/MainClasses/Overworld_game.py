@@ -23,9 +23,8 @@ class Game:
         self.grid = MapGen.Grid(80, 80, 40)
         self.grid.generate_dungeon()
         self.player_pos = self.grid.get_starting_point()
-        self.setup_grid()
         self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
-
+        self.setup_grid()
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         self.enemies = []
         for y in range(self.grid.height):
@@ -34,22 +33,22 @@ class Game:
                 if isinstance(cell, Hostile):
                     cell.game = self  # Set the game reference for the enemy
                     self.enemies.append(cell)
-        #print(self.enemies)
         self.enemy = Hostile(self, (5 * self.grid.cell_size, 5 * self.grid.cell_size),
                              "Assets/Sprites/Entities/Creatures/Walker/walker.png")
-        # self.grid.set_cell(5, 5, Hostile((5, 5), "Assets/Sprites/Entities/Creatures/Walker/walker.png"))
         self.turn_count = 0
         self.is_player_turn = True
         self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        self.vision_radius = 10  # Adjust this value to change the player's vision range        self.popup = None  # Initialize popup as None
+        self.vision_radius = 10  # Adjust this value to change the player's vision range
+        self.popup = None  # Initialize popup as None
+        self.hit_highlight = None  # Initialize hit highlight as None
         self.map_loop()
-
+    def get_player_charater(self):
+        return self.player
     def setup_grid(self):
         self.grid.set_cell(7, 7, Loot(self, (7, 7), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
         self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
                            Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2),
                                 "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
-
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
@@ -94,7 +93,9 @@ class Game:
                             if isinstance(actor, Actor):
                                 actor_event = actor.is_clicked(mouse_pos)
                                 if actor_event == "attack":
-                                    self.player.attack(actor)
+                                    hit_pos = self.player.attack(actor)
+                                    if hit_pos:
+                                        self.hit_highlight = hit_pos
                                 elif actor_event == "search":
                                     self.player.search()
                                 elif actor_event == "use":
@@ -177,11 +178,18 @@ class Game:
             inventory_btn.draw(self.surface)
             if self.popup:
                 self.popup.draw()
+            if self.hit_highlight:
+                hit_x, hit_y = self.hit_highlight
+                pygame.draw.rect(self.surface, (255, 0, 0),
+                                 (hit_x * self.grid.cell_size - self.camera[0],
+                                  hit_y * self.grid.cell_size - self.camera[1],
+                                  self.grid.cell_size, self.grid.cell_size), 2)
             pygame.display.flip()
 
             self.clock.tick(60)
 
         pygame.quit()
+
 
     def pass_turn(self):
         print("Turn passed")

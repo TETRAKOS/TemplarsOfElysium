@@ -1,6 +1,8 @@
 import pygame
 import Entities
 import time
+import Utils
+import random
 
 class Item:
     def __init__(self):
@@ -38,15 +40,19 @@ class RangedWeapon(Weapon):
         self.max_ammo = 2
         self.name = "ranged Weapon"
         self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+        self.accuracy = 100
         pygame.mixer.init()
-      #  self.fire_sfx = pygame.mixer.music.load("Assets/Sound/sfx/smallarms_fire/sm1.wav")
+
+    def calculate_hit_chance(self, distance):
+        return max(0, self.accuracy - (distance * 10))
 
     def attack(self, actor):
         self.fire_at(actor)
 
-
     def fire_at(self, enemy):
-        if self.ammo > 0:
+        distance = Utils.get_distance_from_actors(self.player_ref, enemy)
+        hit_chance = self.calculate_hit_chance(distance)
+        if self.ammo > 0 and random.randint(1, 100) <= hit_chance:
             self.ammo -= 1
             enemy.take_damage(self.damage)
             print(f"Fired at {enemy.name} for {self.damage} damage!")
@@ -54,8 +60,10 @@ class RangedWeapon(Weapon):
             pygame.mixer.music.play()
             if isinstance(self.player_ref, Entities.Player):
                 self.player_ref.pass_turn()
+            return enemy.pos  # Return the position of the hit
         else:
-            print("No ammo left!")
+            print("Missed!")
+            return None  # Indicate a miss
 
     def reload(self):
         self.ammo = self.max_ammo
@@ -64,7 +72,6 @@ class RangedWeapon(Weapon):
         pygame.mixer.music.play()
         if isinstance(self.player_ref, Entities.Player):
             self.player_ref.pass_turn()
-
 
 class surv_pistol(RangedWeapon):
     def __init__(self, player_ref):
