@@ -86,7 +86,7 @@ class smg(RangedWeapon):
     def __init__(self, player_ref):
         super().__init__(player_ref)
         self.damage = 2
-        self.range = 5
+        self.range = 10
         self.ammo = 30
         self.max_ammo = 30
         self.name = "SMG"

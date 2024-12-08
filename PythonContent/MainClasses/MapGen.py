@@ -2,10 +2,9 @@ import pygame
 import random
 import Entities
 
-
 ROOM_COUNT = 32
-ROOM_MIN_SIZE = 7
-ROOM_MAX_SIZE = 12
+ROOM_MIN_SIZE = 10
+ROOM_MAX_SIZE = 20
 
 def sorting_key(value):
     if isinstance(value, Entities.Player):
@@ -44,9 +43,8 @@ class Grid:
             self.add_room(new_room)
             self.rooms.append(new_room)
         for i in range(1, len(self.rooms)):
-            #c_room = self.find_closest_room(self.rooms[i])
             self.connect_rooms(self.rooms[i-1], self.rooms[i])
-        self.encase_rooms()
+     #   self.encase_rooms()
 
     def get_starting_point(self):
         room = self.rooms[0]
@@ -91,7 +89,6 @@ class Grid:
         for y in range(self.height):
             for x in range(self.width):
                 if self.cell_contains(x, y,'.'):
-              #      print("cell contains")
                     if x - 1 >= 0 and self.cell_contains(x - 1, y,".") is None:  # Left
                         self.set_cell(x - 1, y, self.get_wall_sprite((x - 1, y)))
                     if x + 1 < self.width and self.cell_contains(x + 1, y,".") is None:  # Right
@@ -109,22 +106,32 @@ class Grid:
         edge1 = (random.choice([x1, x1 + room1[2] - 1]), random.choice([y1, y1 + room1[3] - 1]))
         edge2 = (random.choice([x2, x2 + room2[2] - 1]), random.choice([y2, y2 + room2[3] - 1]))
 
+  #      self.set_cell(edge1[0],edge1[1],Entities.Door((edge1[0],edge1[1]),"Assets/Sprites/Entities/MapAssets/Door/Door_closed.png"))
+
         if random.choice([True, False]):
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge1[1])
             self.draw_vertical_corridor(edge1[1], edge2[1], edge2[0])
         else:
             self.draw_vertical_corridor(edge1[1], edge2[1], edge1[0])
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge2[1])
+        #
 
     def draw_horizontal_corridor(self, x1, x2, y):
 
         for x in range(min(x1, x2), max(x1, x2) + 1):
-            self.set_cell(x, y, '.')  # Set floor tile
+            self.set_cell(x,y, "r")
+            cell = self.grid[y][x]
+            if "r" and "." in cell:
+                self.remove_from_cell(x,y,"r")
 
     def draw_vertical_corridor(self, y1, y2, x):
         # Draw the corridor
         for y in range(min(y1, y2), max(y1, y2) + 1):
-            self.set_cell(x, y, '.')  # Set floor tile
+          #  self.set_cell(x, y, '.')
+            self.set_cell(x, y, "r")
+            cell = self.grid[y][x]
+            if "r" and "." in cell:
+                self.remove_from_cell(x, y, "r")
 
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
@@ -163,10 +170,30 @@ class Grid:
                     cell_values = self.grid[y][x]
                     if cell_values:
                         most_recent_value = cell_values[0]
+
+
+                        if most_recent_value == "r":
+                            pygame.draw.rect(surface, (255, 0, 0),rect)
                         if most_recent_value == '.':
                             pygame.draw.rect(surface, (50, 50, 50), rect)
+                        if "y" in cell_values:
+                                pygame.draw.rect(surface, (0, 0, 255), rect)
+                        # if "r" and "." in cell_values:
+                        #         pygame.draw.rect(surface, (0, 255, 0), rect)
                         if isinstance(most_recent_value, Entities.Actor):
                             surface.blit(most_recent_value.icon, rect)
+
+
+                        # for actor in cell_values:
+                        #     if actor == "r":
+                        #         pygame.draw.rect(surface, (255, 0, 0), rect)
+                        #         bridge = True
+                        #         if actor == "." and bridge:
+                        #             pygame.draw.rect(surface, (100, 50, 255), rect)
+                        #             print("overlap")
+                        #             bridge = False
+
+
 
     def get_actors(self):
         actors = []

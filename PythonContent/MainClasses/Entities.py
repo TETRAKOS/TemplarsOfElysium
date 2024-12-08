@@ -17,12 +17,13 @@ class Actor:
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.name = "Unknown"
         self.event = "use"
+        self.collision = True
     def onhover(self,event_pos):
         return self.rect.collidepoint(event_pos)
     def getinfo(self):
         return self.name
     def is_clicked(self, mouse_pos):
-        return self.event#self.rect.collidepoint(mouse_pos)
+        return self.event
     def event_use(self, actor):
         print(f"used by{actor}")
         pass
@@ -31,6 +32,22 @@ class Wall(Actor):
     def __init__(self, pos, sprite_path):
         super().__init__(pos, sprite_path)
         self.name = "Concrete wall"
+class Door(Actor):
+    def __init__(self, pos, icon):
+        super().__init__(pos, icon)
+        self.name = "Door"
+        self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+        self.event = "use"
+        self.collision = True
+
+
+    def event_use(self,actor):
+        if self.collision:
+            self.collision = False
+            self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_opened.png")
+        else:
+            self.collision = True
+            self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
 
     #def __str__(self):
      #   print("Wall")
@@ -141,6 +158,13 @@ class Player(Actor):
                 return
             y_offset += 30
 
+    def calculate_hit_chance(self, target):
+        if not isinstance(self.weapon, Items.RangedWeapon):
+            return 0
+        distance = max(abs(self.pos[0] - target.pos[0]), abs(self.pos[1] - target.pos[1]))
+        base_chance = 100 - (distance * 5)
+        return max(min(base_chance, 95), 5)
+
 class InventoryPopup:
     def __init__(self, item, pos, surface):
         self.item = item
@@ -181,7 +205,8 @@ class Hostile(Actor):
 
     def death(self):
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Dead/dead.png")
-        self.alive = False  # Set alive to False when the enemy dies
+        self.alive = False
+        self.collision = False
 
     def take_turn(self, player_pos):
         if self.alive:

@@ -14,7 +14,7 @@ class Game:
         self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
-
+        self.highlight = None  # (x, y, (color), end_time)
         self.surface = pygame.display.set_mode((1024, 724))
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
@@ -49,6 +49,9 @@ class Game:
         self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
                            Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2),
                                 "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+
+    def highlight_tile(self, x, y, color, duration):
+        self.highlight = (x, y, color, pygame.time.get_ticks() + duration)
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
@@ -95,7 +98,8 @@ class Game:
                                 if actor_event == "attack":
                                     hit_pos = self.player.attack(actor)
                                     if hit_pos:
-                                        self.hit_highlight = hit_pos
+                                        self.highlight_tile(hit_pos[0], hit_pos[1], (255, 0, 0),
+                                                            200)
                                 elif actor_event == "search":
                                     self.player.search()
                                 elif actor_event == "use":
@@ -127,33 +131,38 @@ class Game:
             tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
 
             cell_values = self.grid.get_cell(tile_x, tile_y)
+
             for actor in cell_values:
-                if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
-                    info_text = actor.getinfo()
-                    text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
-                    text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
-                    self.surface.blit(text_surface, text_rect)
-                    pygame.draw.line(self.surface, (255,255,255),
-                                     (self.player_pos[0] * self.grid.cell_size - self.camera[
-                                         0] + self.grid.cell_size // 2,
-                                      self.player_pos[1] * self.grid.cell_size - self.camera[
-                                          1] + self.grid.cell_size // 2),
-                                     mouse_pos)
-                    if isinstance(actor, Loot):
-                        pygame.mouse.set_cursor(pygame.cursors.ball)
-                    if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
-                        distance_x = abs(self.player_pos[0] - tile_x)
-                        distance_y = abs(self.player_pos[1] - tile_y)
-                        c_info = max(distance_x, distance_y)
-                        c_text = f"Distance: {c_info} cells"
-                        c_data = "weapon range " + str(self.player.weapon.range) if isinstance(self.player.weapon,
-                                                                                               Items.RangedWeapon) else ""
-                        c_surface = self.font_small.render(c_data, True, (255, 255, 255))
-                        text_surface = self.font_small.render(c_text, True, (
-                        100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
-                        text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
-                        range_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
-                        self.surface.blit(text_surface, text_rect), self.surface.blit(c_surface, range_rect)
+                        if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
+                            info_text = actor.getinfo()
+                            text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
+                            text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
+                            self.surface.blit(text_surface, text_rect)
+                            pygame.draw.line(self.surface, (255, 255, 255),
+                                             (self.player_pos[0] * self.grid.cell_size - self.camera[
+                                                 0] + self.grid.cell_size // 2,
+                                              self.player_pos[1] * self.grid.cell_size - self.camera[
+                                                  1] + self.grid.cell_size // 2),
+                                             mouse_pos)
+                            if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
+                                distance_x = abs(self.player_pos[0] - tile_x)
+                                distance_y = abs(self.player_pos[1] - tile_y)
+                                c_info = max(distance_x, distance_y)
+                                c_text = f"Distance: {c_info} cells"
+                                c_data = "weapon range " + str(self.player.weapon.range) if isinstance(
+                                    self.player.weapon, Items.RangedWeapon) else ""
+                                hit_chance = self.player.calculate_hit_chance(actor)
+                                hit_text = f"Hit Chance: {hit_chance}%"
+                                c_surface = self.font_small.render(c_data, True, (255, 255, 255))
+                                text_surface = self.font_small.render(c_text, True, (
+                                100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
+                                hit_surface = self.font_small.render(hit_text, True, (255, 255, 255))
+                                text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
+                                range_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
+                                hit_rect = hit_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 70))
+                                self.surface.blit(text_surface, text_rect)
+                                self.surface.blit(c_surface, range_rect)
+                                self.surface.blit(hit_surface, hit_rect)
             else:
                 pygame.mouse.set_cursor(pygame.cursors.arrow)
 
@@ -184,6 +193,16 @@ class Game:
                                  (hit_x * self.grid.cell_size - self.camera[0],
                                   hit_y * self.grid.cell_size - self.camera[1],
                                   self.grid.cell_size, self.grid.cell_size), 2)
+
+            if self.highlight:
+                x, y, color, end_time = self.highlight
+                if pygame.time.get_ticks() < end_time:
+                    pygame.draw.rect(self.surface, color,
+                                     (x * self.grid.cell_size - self.camera[0],
+                                      y * self.grid.cell_size - self.camera[1],
+                                      self.grid.cell_size, self.grid.cell_size))
+                else:
+                    self.highlight = None
             pygame.display.flip()
 
             self.clock.tick(60)
@@ -212,7 +231,12 @@ class Game:
         new_x = self.player_pos[0] + move[0]
         new_y = self.player_pos[1] + move[1]
         cell_values = self.grid.get_cell(new_x, new_y)
-        if not any(isinstance(item, Actor) for item in cell_values):
+        can_move = True
+        for item in cell_values:
+            if isinstance(item, Entities.Actor) and item.collision:
+                can_move = False
+                break
+        if can_move:
             #self.grid.set_cell(self.player_pos[0], self.player_pos[1], None) deprecated method
             self.grid.remove_from_cell(self.player_pos[0], self.player_pos[1],self.player)
             self.player_pos = [new_x, new_y]
