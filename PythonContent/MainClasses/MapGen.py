@@ -132,6 +132,17 @@ class Grid:
             cell = self.grid[y][x]
             if "r" and "." in cell:
                 self.remove_from_cell(x, y, "r")
+        min_y, max_y = min(y1, y2), max(y1, y2)
+        for y in [min_y, max_y]:
+            cell_v = self.get_cell(x, y)
+            if "r" in cell_v:
+                if (y == min_y and "." in self.get_cell(x, y - 1)) or \
+                        (y == max_y and "." in self.get_cell(x, y + 1)):
+                    # Remove the "r" tile
+                    self.remove_from_cell(x, y, "r")
+                    # Place a door entity
+                    door = Entities.Door((x, y), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+                    self.set_cell(x, y, door)
 
     def set_cell(self, x, y, value):
         if 0 <= x < self.width and 0 <= y < self.height:
