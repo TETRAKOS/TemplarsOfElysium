@@ -29,31 +29,49 @@ class Grid:
         self.grid = [[[] for _ in range(width)] for _ in range(height)]
         self.rooms = []
 
+
     def generate_dungeon(self):
         self.rooms = []
-
         room_layouts = [
-            {"layout": "manufacturing", "x": 10, "y": 15, "loot_value": 3, "danger": 5},
-            {"layout": "sci", "x": 12, "y": 18, "loot_value": 2, "danger": 3},
-            {"layout": "lab", "x": 12, "y": 4, "loot_value": 4, "danger": 4},
-            {"layout": "storage", "x": 12, "y": 5, "loot_value": 1, "danger": 2},
+            {"layout": "manufacturing", "x": 10, "y": 15, "loot_value": 3, "danger": 5, "max_count": 3},
+            {"layout": "sci", "x": 12, "y": 18, "loot_value": 2, "danger": 3, "max_count": 4},
+            {"layout": "lab", "x": 12, "y": 4, "loot_value": 4, "danger": 4, "max_count": 2},
+            {"layout": "storage", "x": 12, "y": 5, "loot_value": 1, "danger": 2, "max_count": 5},
         ]
 
-        for layout in room_layouts:
+        layout_counts = {layout["layout"]: 0 for layout in room_layouts}
+        attempts = 0
+        max_attempts = ROOM_COUNT * 3  # Limit attempts to avoid infinite loops
+
+        while len(self.rooms) < ROOM_COUNT and attempts < max_attempts:
+            layout = random.choice(room_layouts)
+            if layout_counts[layout["layout"]] >= layout["max_count"]:
+                attempts += 1
+                continue
+
             room_width = layout["x"]
             room_height = layout["y"]
             x = random.randint(1, self.width - room_width - 2)
             y = random.randint(1, self.height - room_height - 2)
             new_room = (x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"])
-            if any(self.overlap(new_room, r) for r in self.rooms):
-                continue
-            self.add_room(new_room)
-            self.rooms.append(new_room)
 
+            if not any(self.overlap(new_room, r) for r in self.rooms):
+                self.add_room(new_room)
+                self.rooms.append(new_room)
+                layout_counts[layout["layout"]] += 1
+
+            attempts += 1
+
+        # Connect rooms
         for i in range(1, len(self.rooms)):
-            self.connect_rooms(self.rooms[i-1], self.rooms[i])
+            self.connect_rooms(self.rooms[i - 1], self.rooms[i])
+
         self.encase_rooms()
         self.add_random_items()
+
+        print(f"Generated {len(self.rooms)} rooms")
+        for layout, count in layout_counts.items():
+            print(f"{layout}: {count}")
 
     def get_starting_point(self):
         room = self.rooms[0]
