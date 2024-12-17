@@ -164,7 +164,8 @@ class Game:
                                 self.surface.blit(c_surface, range_rect)
                                 self.surface.blit(hit_surface, hit_rect)
             else:
-                pygame.mouse.set_cursor(pygame.cursors.arrow)
+                pass
+#                pygame.mouse.set_cursor(pygame.cursors.arrow)
 
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -275,7 +276,7 @@ class Game:
 
     def is_wall(self, x, y):
         cell_values = self.grid.get_cell(x, y)
-        return any(isinstance(item, Entities.Wall) for item in cell_values)
+        return any(isinstance(item, Entities.Wall) for item in cell_values) or (any(isinstance(item, Entities.Door)  and  item.collision == True for item in cell_values ))
 
 def flood_fill(grid, start_pos, visibility_grid): #deprecated
         def is_valid(x, y):
