@@ -19,14 +19,14 @@ class Game:
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
         self.camera = [0, 0]
+        self.enemies = []
         self.clock = pygame.time.Clock()
-        self.grid = MapGen.Grid(80, 80, 40)
+        self.grid = MapGen.Grid(80, 80, 40, self)
         self.grid.generate_dungeon()
         self.player_pos = self.grid.get_starting_point()
         self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
         self.setup_grid()
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
-        self.enemies = []
         for y in range(self.grid.height):
             for x in range(self.grid.width):
                 cell = self.grid.get_cell(x, y)
@@ -220,7 +220,7 @@ class Game:
         print("Enemy's turn")
         for enemy in self.enemies:
             if enemy.alive:
-                enemy.take_turn((self.player_pos[0], self.player_pos[1]))
+                enemy.take_turn(self.player_pos)
         self.is_player_turn = True
 
 
@@ -278,6 +278,8 @@ class Game:
         cell_values = self.grid.get_cell(x, y)
         return any(isinstance(item, Entities.Wall) for item in cell_values) or (any(isinstance(item, Entities.Door)  and  item.collision == True for item in cell_values ))
 
+    def update_hostile_positions(self):
+        self.hostile_positions = {tuple(enemy.pos): enemy for enemy in self.enemies if enemy.alive}
 def flood_fill(grid, start_pos, visibility_grid): #deprecated
         def is_valid(x, y):
             return 0 <= x < grid.width and 0 <= y < grid.height

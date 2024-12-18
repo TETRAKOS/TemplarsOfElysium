@@ -52,17 +52,26 @@ class RangedWeapon(Weapon):
     def fire_at(self, enemy):
         distance = Utils.get_distance_from_actors(self.player_ref, enemy)
         hit_chance = self.calculate_hit_chance(distance)
-        if self.ammo > 0 and random.randint(1, 100) <= hit_chance:
+        if self.ammo > 0:
             self.ammo -= 1
-            enemy.take_damage(self.damage)
-            print(f"Fired at {enemy.name} for {self.damage} damage!")
+            if random.randint(1, 100) <= hit_chance:
+                enemy.take_damage(self.damage)
+                print(f"Fired at {enemy.name} for {self.damage} damage!")
+            else:
+                pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+                pygame.mixer.music.play()
+                print("missed")
+                if isinstance(self.player_ref, Entities.Player):
+                    self.player_ref.pass_turn()
+                return None  # Indicate a miss
             pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
             pygame.mixer.music.play()
             if isinstance(self.player_ref, Entities.Player):
                 self.player_ref.pass_turn()
             return enemy.pos  # Return the position of the hit
+
         else:
-            print("Missed!")
+            print("no ammo!")
             return None  # Indicate a miss
 
     def reload(self):

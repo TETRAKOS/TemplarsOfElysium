@@ -1,7 +1,7 @@
 import pygame
 import Items
 import UIElements
-import heapq
+import Utils
 
 
 #from Overworld_game import Grid
@@ -197,6 +197,9 @@ class Hostile(Actor):
         self.health = 5
         self.alive = True  # Add an alive attribute
 
+    def is_spotted(self):
+        return self.game.visibility_grid[self.pos[1]][self.pos[0]]
+
     def take_damage(self, damage):
         self.health -= damage
         if self.health <= 0:
@@ -209,71 +212,43 @@ class Hostile(Actor):
         self.collision = False
 
     def take_turn(self, player_pos):
-        if self.alive:
+      #  print("Take turn")
+        if self.alive and self.is_spotted():
             distance = max(abs(self.pos[0] - player_pos[0]), abs(self.pos[1] - player_pos[1]))
-            if distance <= 7:
+            if distance <= 1:
+                self.attack(player_pos)
+
+            else:
                 path = self.find_path(player_pos)
+                print("find_path")
                 if path:
                     self.move_towards(path)
+                    print("moving")
+    def attack(self, player_pos):
+        print(f"{self.name} attacks the player at {player_pos}")
+        # Implement attack logic here
 
     def find_path(self, target_pos):
-        def heuristic(a, b):
-            return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-        def get_neighbors(node):
-            neighbors = []
-            for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                x, y = node[0] + dx, node[1] + dy
-                if 0 <= x < self.game.grid.width and 0 <= y < self.game.grid.height:
-                    cell = self.game.grid.get_cell(x, y)
-                    if cell is None or (isinstance(cell, Actor) and not isinstance(cell, Wall)):
-                        neighbors.append((x, y))
-            return neighbors
-
-        start = tuple(self.pos)
-        target = tuple(target_pos)
-        open_set = []
-        heapq.heappush(open_set, (0, start))
-        came_from = {}
-        g_score = {start: 0}
-        f_score = {start: heuristic(start, target)}
-
-        print(f"Start: {start}, Target: {target}")
-
-        while open_set:
-            current = heapq.heappop(open_set)[1]
-            print(f"Current: {current}")
-
-            if current == target:
-                path = []
-                while current in came_from:
-                    path.append(current)
-                    current = came_from[current]
-                path.reverse()
-                print(f"Found path: {path}")
-                return path
-
-            for neighbor in get_neighbors(current):
-                tentative_g_score = g_score[current] + 1
-                print(f"Neighbor: {neighbor}, Tentative g_score: {tentative_g_score}")
-                if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
-                    came_from[neighbor] = current
-                    g_score[neighbor] = tentative_g_score
-                    f_score[neighbor] = tentative_g_score + heuristic(neighbor, target)
-                    heapq.heappush(open_set, (f_score[neighbor], neighbor))
-                    print(f"Added {neighbor} to open_set with f_score {f_score[neighbor]}")
-
-        print("No path found")
-        return None
+        return Utils.a_star_search(self.game.grid, tuple(self.pos), tuple(target_pos), self.game)
 
     def move_towards(self, path):
         if path:
             next_pos = path[0]
-            self.game.grid.set_cell(self.pos[0], self.pos[1], None)
-            self.pos = list(next_pos)
-            self.game.grid.set_cell(self.pos[0], self.pos[1], self)
-            self.rect.topleft = (self.pos[0] * self.game.grid.cell_size, self.pos[1] * self.game.grid.cell_size)
-            print(f"{self.name} moved to {self.pos}")
+            if not self.is_tile_occupied(next_pos):
+                self.game.grid.remove_from_cell(self.pos[0], self.pos[1], self)
+                self.pos = list(next_pos)
+                self.game.grid.set_cell(self.pos[0], self.pos[1], self)
+                self.rect.topleft = (self.pos[0] * self.game.grid.cell_size, self.pos[1] * self.game.grid.cell_size)
+                self.game.update_hostile_positions()
+                print(f"{self.name} moved to {self.pos}")
+
+    def is_tile_occupied(self, pos):
+        for hostile in self.game.enemies:
+            if hostile != self and hostile.pos == list(pos):
+                return True
+        return False
+
+
 class Walker(Hostile):
     def __init__(self, pos):
         super().__init__(pos, "Assets/Sprites/Entities/Creatures/Walker/walker.png")
