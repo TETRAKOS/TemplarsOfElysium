@@ -82,7 +82,7 @@ class Grid:
             self.connect_rooms(self.rooms[i - 1], self.rooms[i])
 
         self.encase_rooms()
-        self.add_random_items()
+        # self.add_random_items()
 
         print(f"Generated {len(self.rooms)} rooms")
         for layout, count in layout_counts.items():
@@ -95,19 +95,22 @@ class Grid:
         print(x,y)
         return [x,y]
 
-
     def add_random_items(self):
-        items = ["d", "g"] # "j" not included
+        items = ["d", "g"]  # "d" for dust, "g" for garbage
         for room in self.rooms:
-            x, y, width, height, layout, loot_value, danger,tile = room
-            num_items = random.randint(10, 30)
-            for s in range(num_items):
+            x, y, width, height, layout, loot_value, danger, tile = room
+            num_items = random.randint(5, 15)  # Adjust the range as needed
+            for _ in range(num_items):
                 item = random.choice(items)
-                item_x = random.randint(x, x + width - 1)
-                item_y = random.randint(y, y + height - 1)
-                if not self.cell_contains(item_x, item_y, item):
-                    self.set_cell(item_x, item_y, item)
-                    print("item added")
+                attempts = 0
+                while attempts < 10:  # Limit attempts to avoid infinite loop
+                    item_x = random.randint(x + 1, x + width - 2)  # Avoid placing on walls
+                    item_y = random.randint(y + 1, y + height - 2)  # Avoid placing on walls
+                    if self.cell_contains(item_x, item_y, tile) and not self.cell_contains(item_x, item_y, item):
+                        self.set_cell(item_x, item_y, item)
+                        print(f"Item {item} added at ({item_x}, {item_y})")
+                        break
+                    attempts += 1
 
     def find_closest_room(self, room):
         x1, y1, _, _ = room
@@ -143,12 +146,20 @@ class Grid:
                 self.set_cell(j, i, tile)  # Set floor tile
     def enrich_room(self, room):
         x,y,width,height,layout,loot_value, danger, tile = room
+        items = ["d", "g","s","r"]  # "d" for dust, "g" for garbage
         for i in range(danger):
             xr= x + random.randint(1, width - 2)
             yr = y + random.randint(1, height - 2)
             enemy_to_add = Entities.Hostile(self.game,[xr,yr],"Assets/Sprites/Entities/Creatures/Walker/walker.png")
             self.set_cell(xr,yr, enemy_to_add)
             self.game.enemies.append(enemy_to_add)
+        num_items = random.randint(1, 20)  # Adjust the range as needed
+        for _ in range(num_items):
+            item = random.choice(items)
+            item_x = random.randint(x + 1, x + width - 2)  # Avoid placing on walls
+            item_y = random.randint(y + 1, y + height - 2)  #^
+            self.set_cell(item_x, item_y, item)
+             #   break
         # for s in range(loot_value):
         #     xr = x + random.randint(1, width - 2)
         #     yr = y + random.randint(1, height - 2)
@@ -287,54 +298,6 @@ class Grid:
         # Render actor sprites
         for image, rect in actor_sprites:
             surface.blit(image, rect)
-    # def draw(self, surface, camera, visibility_grid):
-    #     for y in range(self.height):
-    #         for x in range(self.width):
-    #             if visibility_grid[y][x]:
-    #                 rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
-    #                                    self.cell_size)
-    #                 cell_values = self.grid[y][x]
-    #                 for value in cell_values:
-    #                     if value in self.images: #and value != '.':
-    #                         surface.blit(self.images[value], rect)
-    #                 for value in cell_values:
-    #                     if isinstance(value, Entities.Actor):
-    #                         surface.blit(value.icon, rect)
-    # def draw(self, surface, camera, visibility_grid):
-    #     floor = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/floor.png")
-    #     rubble = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/rubble.png")
-    #     dust = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/dust.png")
-    #     garbage = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/garbage.png")
-    #     bridge_n = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/bn.png")
-    #     bridge_w = pygame.image.load("Assets/Sprites/Entities/MapAssets/Decor/bw.png")
-    #
-    #     for y in range(self.height):
-    #         for x in range(self.width):
-    #             if visibility_grid[y][x]:
-    #                 rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
-    #                                    self.cell_size)
-    #                 cell_values = self.grid[y][x]
-    #                 if cell_values:
-    #                     most_recent_value = cell_values[0]
-    #
-    #                     if  '.' in cell_values:
-    #                         surface.blit(floor, rect)
-    #                     if "g" in cell_values:
-    #                         surface.blit(rubble,rect)
-    #                     if "d" in cell_values:
-    #                         surface.blit(dust,rect)
-    #                     if "j" in cell_values:
-    #                         surface.blit(garbage, rect)
-    #                     if "y" in cell_values:
-    #                         pygame.draw.rect(surface, (0, 0, 255), rect)
-    #                     if "bw" in cell_values:
-    #                         surface.blit(bridge_w, rect)
-    #                     if "bn" in cell_values:
-    #                         surface.blit(bridge_n,rect)
-    #
-    #                     if isinstance(most_recent_value, Entities.Actor):
-    #                         surface.blit(most_recent_value.icon, rect)
-
     def get_actors(self):
         actors = []
         for y in range(self.height):

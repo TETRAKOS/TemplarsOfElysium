@@ -1,6 +1,8 @@
 {
     ".": "Assets/Sprites/Entities/MapAssets/Decor/floor.png",
     "g": "Assets/Sprites/Entities/MapAssets/Decor/rubble.png",
+    "r": "Assets/Sprites/Entities/MapAssets/Decor/rubble2.png",
+    "s": "Assets/Sprites/Entities/MapAssets/Decor/rubble3.png",
     "d": "Assets/Sprites/Entities/MapAssets/Decor/dust.png",
     "j": "Assets/Sprites/Entities/MapAssets/Decor/garbage.png",
     "bn": "Assets/Sprites/Entities/MapAssets/Decor/bn.png",
