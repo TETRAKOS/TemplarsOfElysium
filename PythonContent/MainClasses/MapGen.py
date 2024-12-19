@@ -39,19 +39,27 @@ class Grid:
         asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'asset_paths.js')
         with open(asset_path_file, 'r') as f:
             return json.load(f)
+
+    def load_room_layouts(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'rooms_layout.js')
+        with open(asset_path_file, 'r') as f:
+            return json.load(f)
+
+    def load_room_content(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'room_content.js')
+        with open(asset_path_file, 'r') as f:
+            return json.load(f)
+
     def load_images(self):
         for key, path in self.asset_paths.items():
             self.images[key] = pygame.image.load(path)
 
-
     def generate_dungeon(self):
         self.rooms = []
-        room_layouts = [
-            {"layout": "manufacturing", "x": 10, "y": 15, "loot_value": 3, "danger": 5, "max_count": 3, "tile":"."},
-            {"layout": "sci", "x": 12, "y": 18, "loot_value": 2, "danger": 3, "max_count": 4,"tile":"sci"},
-            {"layout": "lab", "x": 12, "y": 4, "loot_value": 4, "danger": 4, "max_count": 2, "tile":"sci"},
-            {"layout": "storage", "x": 12, "y": 5, "loot_value": 1, "danger": 2, "max_count": 5, "tile":"str"},
-        ]
+        room_layouts = self.load_room_layouts()
+        room_content = self.load_room_content()
 
         layout_counts = {layout["layout"]: 0 for layout in room_layouts}
         attempts = 0
@@ -67,11 +75,11 @@ class Grid:
             room_height = layout["y"]
             x = random.randint(1, self.width - room_width - 2)
             y = random.randint(1, self.height - room_height - 2)
-            new_room = (x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"],layout["tile"])
+            new_room = (x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"], layout["tile"])
 
             if not any(self.overlap(new_room, r) for r in self.rooms):
                 self.add_room(new_room)
-                self.enrich_room(new_room)
+                self.enrich_room(new_room, room_content)
                 self.rooms.append(new_room)
                 layout_counts[layout["layout"]] += 1
 
@@ -92,8 +100,8 @@ class Grid:
         room = self.rooms[0]
         x = (room[0])
         y = (room[1])
-        print(x,y)
-        return [x,y]
+        print(x, y)
+        return [x, y]
 
     def add_random_items(self):
         items = ["d", "g"]  # "d" for dust, "g" for garbage
@@ -144,15 +152,27 @@ class Grid:
         for i in range(y, y + height):
             for j in range(x, x + width):
                 self.set_cell(j, i, tile)  # Set floor tile
-    def enrich_room(self, room):
-        x,y,width,height,layout,loot_value, danger, tile = room
-        items = ["d", "g","s","r"]  # "d" for dust, "g" for garbage
+
+    def enrich_room(self, room, room_content):
+        x, y, width, height, layout, loot_value, danger, tile = room
+        items = ["d", "g", "s", "r"]  # "d" for dust, "g" for garbage
         for i in range(danger):
-            xr= x + random.randint(1, width - 2)
+            xr = x + random.randint(1, width - 2)
             yr = y + random.randint(1, height - 2)
-            enemy_to_add = Entities.Hostile(self.game,[xr,yr],"Assets/Sprites/Entities/Creatures/Walker/walker.png")
-            self.set_cell(xr,yr, enemy_to_add)
+            enemy_to_add = Entities.Hostile(self.game, [xr, yr], "Assets/Sprites/Entities/Creatures/Walker/walker.png")
+            self.set_cell(xr, yr, enemy_to_add)
             self.game.enemies.append(enemy_to_add)
+
+        # Add room-specific content
+        for content in room_content:
+            if content["layout"] == layout:
+                for item in content["content"]:
+                    pos_x, pos_y = item["position"]
+                    texture_path = item["texture"]
+                    item_x = x + pos_x
+                    item_y = y + pos_y
+                    self.set_cell(item_x, item_y, Entities.Actor(pos=[item_x, item_y], icon=texture_path))
+
         num_items = random.randint(1, 20)  # Adjust the range as needed
         for _ in range(num_items):
             item = random.choice(items)
@@ -168,14 +188,14 @@ class Grid:
     def encase_rooms(self):
         for y in range(self.height):
             for x in range(self.width):
-                if self.cell_contains(x, y,'.'):
-                    if x - 1 >= 0 and self.cell_contains(x - 1, y,".") is None and self.cell_contains(x - 1, y,Entities.Actor) is None:  # Left
+                if self.cell_contains(x, y, '.'):
+                    if x - 1 >= 0 and self.cell_contains(x - 1, y, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Left
                         self.set_cell(x - 1, y, self.get_wall_sprite((x - 1, y)))
-                    if x + 1 < self.width and self.cell_contains(x + 1, y,".") is None and self.cell_contains(x - 1, y,Entities.Actor) is None:  # Right
+                    if x + 1 < self.width and self.cell_contains(x + 1, y, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Right
                         self.set_cell(x + 1, y, self.get_wall_sprite((x + 1, y)))
-                    if y - 1 >= 0 and self.cell_contains(x, y - 1,".") is None and self.cell_contains(x - 1, y,Entities.Actor) is None:  # Top
+                    if y - 1 >= 0 and self.cell_contains(x, y - 1, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Top
                         self.set_cell(x, y - 1, self.get_wall_sprite((x, y - 1)))
-                    if y + 1 < self.height and self.cell_contains(x, y + 1,".") is None and self.cell_contains(x - 1, y,Entities.Actor) is None:  # Bottom
+                    if y + 1 < self.height and self.cell_contains(x, y + 1, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Bottom
                         self.set_cell(x, y + 1, self.get_wall_sprite((x, y + 1)))
 
     def connect_rooms(self, room1, room2):
@@ -223,10 +243,10 @@ class Grid:
 
     def draw_horizontal_corridor(self, x1, x2, y):
         for x in range(min(x1, x2), max(x1, x2) + 1):
-            self.set_cell(x,y, "bw")
+            self.set_cell(x, y, "bw")
             cell = self.grid[y][x]
             if "r" and "." in cell:
-                self.remove_from_cell(x,y,"bw")
+                self.remove_from_cell(x, y, "bw")
 
     def draw_vertical_corridor(self, y1, y2, x):
         for y in range(min(y1, y2), max(y1, y2) + 1):
@@ -247,7 +267,7 @@ class Grid:
             self.grid[y][x].append(value)
             self.sort_cell(x, y)
 
-    def remove_from_cell(self,x,y, actor):
+    def remove_from_cell(self, x, y, actor):
         if 0 <= x < self.width and 0 <= y < self.height:
             if actor in self.grid[y][x]:  # Ensure the actor exists in the cell before removing it
                 self.grid[y][x].remove(actor)
@@ -267,6 +287,7 @@ class Grid:
             if isinstance(item, type(value)) or item == value:
                 return item
         return None
+
     def draw(self, surface, camera, visibility_grid):
         floor_sprites = []
         decor_sprites = []
@@ -298,6 +319,7 @@ class Grid:
         # Render actor sprites
         for image, rect in actor_sprites:
             surface.blit(image, rect)
+
     def get_actors(self):
         actors = []
         for y in range(self.height):

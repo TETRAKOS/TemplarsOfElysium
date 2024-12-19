@@ -27,7 +27,10 @@ class Actor:
     def event_use(self, actor):
         print(f"used by{actor}")
         pass
-
+class Block(Actor):
+    def __init__(self, pos, sprite_path):
+        super().__init__(pos, sprite_path)
+        self.collision = True
 class Wall(Actor):
     def __init__(self, pos, sprite_path):
         super().__init__(pos, sprite_path)
