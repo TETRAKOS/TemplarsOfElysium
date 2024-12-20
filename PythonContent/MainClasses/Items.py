@@ -48,6 +48,7 @@ class RangedWeapon(Weapon):
 
     def attack(self, actor):
         self.fire_at(actor)
+        self.player_ref.pass_turn()
 
     def fire_at(self, enemy):
         distance = Utils.get_distance_from_actors(self.player_ref, enemy)
@@ -62,13 +63,12 @@ class RangedWeapon(Weapon):
                 pygame.mixer.music.play()
                 print("missed")
                 if isinstance(self.player_ref, Entities.Player):
-                    self.player_ref.pass_turn()
-                return None  # Indicate a miss
+                    return None  # Indicate a miss
             pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
             pygame.mixer.music.play()
             if isinstance(self.player_ref, Entities.Player):
-                self.player_ref.pass_turn()
-            return enemy.pos  # Return the position of the hit
+      #         self.player_ref.pass_turn()
+                return enemy.pos  # Return the position of the hit
 
         else:
             print("no ammo!")
@@ -106,6 +106,7 @@ class smg(RangedWeapon):
             pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
             pygame.mixer.music.play()
             time.sleep(0.075)
+        self.player_ref.pass_turn()
 
 class Shard(Item):
     def __init__(self):

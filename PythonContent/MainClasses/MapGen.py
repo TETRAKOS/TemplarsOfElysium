@@ -48,7 +48,7 @@ class Grid:
 
     def load_room_content(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'room_content.js')
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'rooms_content.js')
         with open(asset_path_file, 'r') as f:
             return json.load(f)
 
