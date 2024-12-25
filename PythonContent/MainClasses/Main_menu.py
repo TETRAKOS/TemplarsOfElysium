@@ -3,11 +3,11 @@ from UIElements import TextRenderer, Button, InputBox
 import subprocess, os, sys
 import sqlite3
 
-
 class Menu:
-    def __init__(self):
+    def __init__(self, surface):
         pygame.init()
         pygame.mixer.init()
+        self.surface = surface
         self.font_path = os.path.join("HomeVideo-Regular", "Assets/fonts/Game/HomeVideo-Regular.otf")
         self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 48)
         self.button_font = TextRenderer(self.font, color=(255, 255, 255))
@@ -18,7 +18,6 @@ class Menu:
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_caption("Templars of Elysium")
 
-        self.surface = pygame.display.set_mode((800, 600))
         self.bgc = (45, 48, 44)
         pygame.display.set_icon(self.gameIcon)
 
@@ -36,15 +35,14 @@ class Menu:
         while running_menu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running_menu = False
+                    return "quit"
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if quit_button.is_clicked(event.pos):
-                        running_menu = False
+                        return "quit"
                     if instant_action_button.is_clicked(event.pos):
-                        subprocess.Popen([sys.executable, "CombatGrid.py"])
+                        return "game"  # Switch to the game state
                     if campaign_button.is_clicked(event.pos):
-                        self.Run_CampaignMenu()
-                        return
+                        return self.Run_CampaignMenu()
 
             self.surface.fill(self.bgc)
 
@@ -60,6 +58,8 @@ class Menu:
 
             pygame.display.flip()
 
+        return "menu"
+
     def new_game_menu(self):
         create_button = Button("confirm", ((self.surface.get_width() - 280), 480), (260, 50), self.font,
                                enabled=True)
@@ -69,23 +69,21 @@ class Menu:
         while ng_run:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    ng_run = False
+                    return "quit"
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if create_button.is_clicked(event.pos):
                         self.new_gameSQL(name_ib.get_name())
-                        # with open("GameData/menuD.txt", "w") as s:
-                        #     f = name_ib.get_name()
-                        #     s.write(f)
-                        subprocess.Popen([sys.executable, "Global.py", name_ib.get_name()])
+                        return "game"  # Switch to the game state
                     elif back_btn.is_clicked(event.pos):
-                        self.Run_CampaignMenu()
-                        ng_run = False
+                        return self.Run_CampaignMenu()
                 name_ib.handle_event(event)
             self.surface.fill(self.bgc)
             create_button.draw(self.surface)
             back_btn.draw(self.surface)
             name_ib.draw(self.surface)
             pygame.display.flip()
+
+        return "menu"
 
     def new_gameSQL(self, profile_name=None):
         connection = sqlite3.connect("GameData/players.db")
@@ -99,7 +97,7 @@ class Menu:
                         ''')
             self.cursor.execute('SELECT COUNT(*) FROM player')
             counter = self.cursor.fetchone()[0]
-            self.cursor.execute('''INSERT INTO player (id, profile_dir, profile_name) 
+            self.cursor.execute('''INSERT INTO player (id, profile_dir, profile_name)
                                            VALUES (?, ?, ?)''', (counter, profile_dir, profile_name))
             connection.commit()
 
@@ -119,6 +117,7 @@ class Menu:
 
         self.cursor.close()
         connection.close()
+
     def Run_CampaignMenu(self):
         new_btn = Button("New Game", ((self.surface.get_width() - 280), 480), (260, 50), self.font, enabled=True)
         back_btn = Button("Back", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
@@ -135,37 +134,28 @@ class Menu:
         while running_menu:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running_menu = False
-                if event.type == pygame.MOUSEBUTTONDOWN:  # Corrected line
+                    return "quit"
+                if event.type == pygame.MOUSEBUTTONDOWN:
                     if back_btn.is_clicked(event.pos):
-                        self.run_menu()
-                        running_menu = False  # Exit the campaign menu
-                        return
+                        return self.run_menu()
                     if new_btn.is_clicked(event.pos):
-                        self.new_game_menu()
-                        return
-                    #                subprocess.Popen([sys.executable, "Global.py"])
+                        return self.new_game_menu()
                     if loadgame_btn.is_clicked(event.pos):
                         print("Loading game...")
                     if continue_btn.is_clicked(event.pos):
-                        # print("Continuing game...")
                         conn = sqlite3.connect("GameData/players.db")
                         cursor = conn.cursor()
                         cursor.execute("SELECT * FROM player ORDER BY id DESC LIMIT 1")
                         last_save = cursor.fetchone()
-                        pygame.display.iconify()
-                        subprocess.Popen([sys.executable, "Global.py", last_save[2]])
+                        return "game"  # Switch to the game state
+
             self.surface.fill(self.bgc)  # Clear the surface for the campaign menu
             new_btn.draw(self.surface)
             back_btn.draw(self.surface)
             loadgame_btn.draw(self.surface)
             continue_btn.draw(self.surface)
             self.surface.blit(game_logo_sized, game_logo)
-            typer_render.draw_text(self.surface, "Campaign Mode", (20, 20),2000)
+            typer_render.draw_text(self.surface, "Campaign Mode", (20, 20), 2000)
             pygame.display.flip()
-        pygame.quit()
 
-
-if __name__ == "__main__":
-    menu = Menu()
-    menu.run_menu()
+        return "menu"

@@ -6,19 +6,19 @@ from UIElements import Rectangle, TextRenderer, Button
 import Items
 import MapGen
 import math
+
 class Game:
-    def __init__(self):
-        pygame.init()
+    def __init__(self, surface):
         self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
         self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
         self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
         self.highlight = None  # (x, y, (color), end_time)
-        self.surface = pygame.display.set_mode((1024, 724))
         self.bgc = (20, 25, 27)
         self.bgcd = (15, 20, 18)
         self.camera = [0, 0]
+        self.surface = surface
         self.enemies = []
         self.clock = pygame.time.Clock()
         self.grid = MapGen.Grid(80, 80, 40, self)
@@ -41,9 +41,10 @@ class Game:
         self.vision_radius = 10  # Adjust this value to change the player's vision range
         self.popup = None  # Initialize popup as None
         self.hit_highlight = None  # Initialize hit highlight as None
-        self.map_loop()
+
     def get_player_charater(self):
         return self.player
+
     def setup_grid(self):
         self.grid.set_cell(7, 7, Loot(self, (7, 7), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
         self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
@@ -52,6 +53,7 @@ class Game:
 
     def highlight_tile(self, x, y, color, duration):
         self.highlight = (x, y, color, pygame.time.get_ticks() + duration)
+
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
@@ -67,7 +69,7 @@ class Game:
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    running = False
+                    return "shell"  # Return to the shell state
                 if self.is_player_turn:  # Only handle input if it's the player's turn
                     move = self.player.handle_input(event)
                     if move != (0, 0):
@@ -208,8 +210,7 @@ class Game:
 
             self.clock.tick(60)
 
-        pygame.quit()
-
+        return "shell"  # Return to the shell state if the loop exits
 
     def pass_turn(self):
         print("Turn passed")
@@ -222,7 +223,6 @@ class Game:
             if enemy.alive:
                 enemy.take_turn(self.player_pos)
         self.is_player_turn = True
-
 
     def update_camera(self):
         self.camera[0] = self.player_pos[0] * self.grid.cell_size - self.surface.get_width() // 2 + self.grid.cell_size // 2
@@ -280,24 +280,3 @@ class Game:
 
     def update_hostile_positions(self):
         self.hostile_positions = {tuple(enemy.pos): enemy for enemy in self.enemies if enemy.alive}
-def flood_fill(grid, start_pos, visibility_grid): #deprecated
-        def is_valid(x, y):
-            return 0 <= x < grid.width and 0 <= y < grid.height
-
-        def is_wall(x, y):
-            cell_values = grid.get_cell(x, y)
-            return any(isinstance(item, Entities.Wall) for item in cell_values)
-
-        stack = [start_pos]
-        while stack:
-            x, y = stack.pop()
-            if is_valid(x, y) and not visibility_grid[y][x]:
-                visibility_grid[y][x] = True
-                if not is_wall(x, y):
-                    stack.append((x + 1, y))
-                    stack.append((x - 1, y))
-                    stack.append((x, y + 1))
-                    stack.append((x, y - 1))
-
-if __name__ == "__main__":
-    Game()

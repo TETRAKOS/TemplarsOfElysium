@@ -1,21 +1,14 @@
 import pygame
-#import sqlite3
 import sys
-import subprocess
-
 from PythonContent.MainClasses.UIElements import ImageButton
 from UIElements import Button, TextRenderer
 
-
 class Shell:
-    def __init__(self):
-        pygame.init()
-        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
-        self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
-       # self.button_font = TextRenderer(self.font, color=(255, 255, 255))
-        self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
-        pygame.display.set_caption("Templars of Elysium - Planning")
-        self.surface = pygame.display.set_mode((1024, 600))
+    def __init__(self, surface, font, font_small, gameIcon):
+        self.surface = surface
+        self.font = font
+        self.font_small = font_small
+        self.gameIcon = gameIcon
         self.bgc = (45, 48, 44)
         self.b_bgc = (35, 38, 34)
         self.selected_fcl = None
@@ -23,10 +16,9 @@ class Shell:
         if len(sys.argv) > 1:
             self.profile = sys.argv[1]
             print(self.profile)
-            self.mission_screen()
         else:
             print("No profile specified")
-            self.mission_screen()
+
     def mission_screen(self):
         factory_d = pygame.image.load("Assets/Sprites/Entities/Buildings/Factory/Factory_default.png")
         factory_h = pygame.image.load("Assets/Sprites/Entities/Buildings/Factory/Factory_highlighted.png")
@@ -59,7 +51,6 @@ class Shell:
         while menu_running:
             mouse_pos = pygame.mouse.get_pos()
             for event in pygame.event.get():
-            #    print(mouse_pos)
                 if event.type == pygame.QUIT:
                     menu_running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
@@ -108,7 +99,7 @@ class Shell:
                         print("Load Button Clicked")
                     elif prep_raid_btn.is_clicked(event.pos):
                         print("Preparation for Raid Button Clicked")
-                        subprocess.Popen([sys.executable, "Overworld_game.py"])
+                        return "game"  # Switch to the game state
                     elif options_btn.is_clicked(event.pos):
                         print("Options Button Clicked")
                     elif quit_btn.is_clicked(event.pos):
@@ -120,7 +111,6 @@ class Shell:
                 self.surface.fill(self.bgc)
                 prep_raid_btn.set_enabled(True if self.selected_fcl != None else False)
                 prep_raid_btn.update_text("Prepare for intrusion" if self.selected_fcl!= None else "Select the facility")
-             #   self.surface.blit(circle_map, command)
                 self.surface.blit(tower_countur, tower_cb)
                 raid_btn.draw(self.surface), tech_btn.draw(self.surface),info_btn.draw(self.surface),misc_btn.draw(self.surface)
                 save_btn.draw(self.surface),load_btn.draw(self.surface), options_btn.draw(self.surface), quit_btn.draw(self.surface)
@@ -134,6 +124,7 @@ class Shell:
                 raid_description.draw_text(self.surface,raid_subt, (20,60),380)
                 pygame.display.flip()
 
+        return "shell"  # Return to the shell state if the loop exits
 
     def high_buttons_array(self):
         save_btn = Button("Save", (620, 0), (100, 25), self.font_small, self.b_bgc,)
@@ -141,6 +132,7 @@ class Shell:
         options_btn = Button("Options", (820, 0), (100, 25), self.font_small, self.b_bgc,)
         quit_btn = Button("Quit", (920, 0), (100, 25), self.font_small, self.b_bgc,)
         return save_btn, load_btn, options_btn, quit_btn
+
     def low_buttons_array(self, state):
         raid_btn = Button("Mission", (50, 550), (225, 50), self.font, self.b_bgc,enabled=True)
         if state == "Mission":
@@ -155,6 +147,7 @@ class Shell:
         if state == "Info":
             info_btn.set_enabled(False)
         return raid_btn,tech_btn,units_btn,info_btn
+
     def tech_menu(self):
         raid_b, tech_b, gear_b, info_b = self.low_buttons_array('Tech')
         t_running=True
@@ -176,8 +169,3 @@ class Shell:
             raid_b.draw(self.surface), tech_b.draw(self.surface), gear_b.draw(self.surface), info_b.draw(
                 self.surface)
             pygame.display.flip()
-
-# class District:
-#     pass
-
-shell = Shell()
