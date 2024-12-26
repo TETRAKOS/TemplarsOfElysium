@@ -3,6 +3,7 @@ import random
 import Entities
 import json
 import os
+from  Mission_manager import Mission
 
 ROOM_COUNT = 32
 ROOM_MIN_SIZE = 10
@@ -31,6 +32,7 @@ class Grid:
         self.grid = [[[] for _ in range(width)] for _ in range(height)]
         self.rooms = []
         self.images = {}
+        self.mission = Mission(self.game, self, "scout")
         self.asset_paths = self.load_asset_paths()
         self.load_images()
 
