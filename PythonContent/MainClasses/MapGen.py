@@ -5,9 +5,9 @@ import json
 import os
 from  Mission_manager import Mission
 
-ROOM_COUNT = 32
-ROOM_MIN_SIZE = 10
-ROOM_MAX_SIZE = 20
+# ROOM_COUNT = 32
+# ROOM_MIN_SIZE = 10
+# ROOM_MAX_SIZE = 20
 
 def sorting_key(value):
     if isinstance(value, Entities.Player):
@@ -62,12 +62,12 @@ class Grid:
         self.rooms = []
         room_layouts = self.load_room_layouts()
         room_content = self.load_room_content()
-
+        name, basic, danger, loot, final = self.mission.generate_mission()
         layout_counts = {layout["layout"]: 0 for layout in room_layouts}
         attempts = 0
-        max_attempts = ROOM_COUNT * 3  # Limit attempts to avoid infinite loops
+        max_attempts = (basic+danger+loot) * 3  # Limit attempts to avoid infinite loops
 
-        while len(self.rooms) < ROOM_COUNT and attempts < max_attempts:
+        while len(self.rooms) < (basic+danger+loot) and attempts < max_attempts:
             layout = random.choice(room_layouts)
             if layout_counts[layout["layout"]] >= layout["max_count"]:
                 attempts += 1

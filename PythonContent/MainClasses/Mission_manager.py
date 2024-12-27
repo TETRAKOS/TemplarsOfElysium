@@ -16,9 +16,7 @@ class Mission:
             danger = mission_data["danger"]
             loot = mission_data["loot"]
             final = mission_data["final"]
-            print(f"Mission: {name}, Basic: {basic}, Danger: {danger}, Loot: {loot}, Final: {final}")
-        else:
-            print(f"Mission {self.mission} not found in the mission list.")
+            return name,basic,danger,loot,final
 
     def read_mission(self):
         missions_dir = os.path.dirname(os.path.abspath(__file__))
