@@ -15,7 +15,8 @@ class Game:
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
         self.highlight = None  # (x, y, (color), end_time)
-        self.bgc = (20, 25, 27)
+        #self.bgc = (20, 25, 27)
+        self.bgc = pygame.image.load("Assets/Sprites/Backdrops/NormalBackground.png")
         self.bgcd = (15, 20, 18)
         self.camera = [0, 0]
         self.surface = surface
@@ -26,6 +27,7 @@ class Game:
         self.player_pos = self.grid.get_starting_point()
         self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
         self.setup_grid()
+        self.grid.generate_loot()
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         for y in range(self.grid.height):
             for x in range(self.grid.width):
@@ -57,11 +59,20 @@ class Game:
     def map_loop(self):
         backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
         turn_text = TextRenderer(self.font_small, (255, 255, 255))
+        ammo_icon = pygame.image.load("Assets/Sprites/icons/ammo.png")
+        ammo_icon = pygame.transform.scale(ammo_icon, (32, 32))
         ammo_text = TextRenderer(self.font_small, (255, 255, 255))
         weapon_name = TextRenderer(self.font_small, (255, 255, 255))
+        health_text = TextRenderer(self.font_small, (255,255,255))
+        health_icon = pygame.image.load("Assets/Sprites/icons/Health.png")
+        health_icon = pygame.transform.scale(health_icon, (32, 32))
         reload_button = Button("Reload", (self.surface.get_width() - 175, 350), (75, 50), self.font_small)
         weapon_mode = Button("Weapon Mode", (self.surface.get_width() - 85, 350), (75, 50), self.font_small)
         inventory_btn = Button("Inventory", (self.surface.get_width() - 175, 650), (150, 50), self.font_small)
+        minimap = self.grid.generate_minimap()
+        minimap_size = 190  # size minimap
+        minimap = pygame.transform.scale(minimap, (minimap_size, minimap_size))
+        minimap_pos = (self.surface.get_width() - minimap_size - 5, 450)
         running = True
         inventory_open = False
         self.player.inventory.add_item(Items.Shard())
@@ -118,7 +129,8 @@ class Game:
                             else:
                                 inventory_btn.text = "Inventory"
 
-            self.surface.fill(self.bgc)
+            self.surface.blit(self.bgc,(0,0))
+       #    self.surface.fill(self.bgc)
             self.update_camera()
             self.update_visibility()  # Update visibility
             clock = pygame.time.Clock()
@@ -176,15 +188,29 @@ class Game:
                 weapon_name.draw_text(self.surface, self.player.weapon.name, (self.surface.get_width() - 150, 250), 50)
                 if isinstance(self.player.weapon, Items.RangedWeapon):
                     ammo_text.draw_text(self.surface, str(self.player.weapon.ammo),
-                                        (self.surface.get_width() - 150, 300), 50)
+                                        (self.surface.get_width() - 100, 320), 50)
                     reload_button.draw(self.surface)
+                    self.surface.blit(ammo_icon, (self.surface.get_width() - 120,300))
 
             else:
                 weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
-                weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width() - 190, 275), 200)
+                weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width() - 190, 225), 200)
             weapon_mode.draw(self.surface)
 
-            self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 200))
+            self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 150))
+
+            #health display
+            self.surface.blit(health_icon, (self.surface.get_width() - 180,300))
+            health_text.draw_text(self.surface,str(self.player.health.health),(self.surface.get_width() - 160,320),200)
+            self.surface.blit(minimap, minimap_pos)
+
+            # Draw player position on minimap
+            player_minimap_x = int(self.player_pos[0] * minimap_size / self.grid.width)
+            player_minimap_y = int(self.player_pos[1] * minimap_size / self.grid.height)
+            pygame.draw.circle(self.surface, (0, 0, 255),
+                               (minimap_pos[0] + player_minimap_x, minimap_pos[1] + player_minimap_y), 2)
+
+            #inventory
             if inventory_open:
                 self.player.render_inventory(self.surface)
             inventory_btn.draw(self.surface)
@@ -206,11 +232,12 @@ class Game:
                                       self.grid.cell_size, self.grid.cell_size))
                 else:
                     self.highlight = None
-            pygame.display.flip()
 
+
+            pygame.display.flip()
             self.clock.tick(60)
 
-        return "shell"  # Return to the shell state if the loop exits
+        return "shell"
 
     def pass_turn(self):
         print("Turn passed")
@@ -280,3 +307,41 @@ class Game:
 
     def update_hostile_positions(self):
         self.hostile_positions = {tuple(enemy.pos): enemy for enemy in self.enemies if enemy.alive}
+
+    def show_game_over(self):
+        game_over_font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 64)
+        game_over_text = TextRenderer(game_over_font, (255, 0, 0))
+        expl_text = TextRenderer(self.font, (255, 255, 255))
+        dead_image = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_dead.png")
+        dead_image = pygame.transform.scale(dead_image, (80, 80))
+
+
+        exit_button = Button("Confirm", (self.surface.get_width() // 2 - 50, self.surface.get_height() // 2 + 120),
+                             (150, 50), self.font)
+
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    exit()
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    mouse_pos = pygame.mouse.get_pos()
+                    if exit_button.is_clicked(mouse_pos):
+                        pygame.quit()
+                        exit()
+
+            self.surface.blit(self.bgc,(0,0))
+            exit_button.draw(self.surface)
+            self.surface.blit(dead_image,(512-20,400-20))
+            game_over_text.draw_text(self.surface, "Mission Failure", (25, self.surface.get_height() // 2 -150),1000, align="center")
+            expl_text.draw_text(self.surface, "Your raider has died and all items has been lost",(self.surface.get_width() // 3, self.surface.get_height() // 2 -75 ),400,align="center")
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        self.map_loop()
+    def check_health(self):
+        if self.player.health.health <= 0:
+            self.show_game_over()
+        elif self.player.health.health <= 35:
+            self.bgc = pygame.image.load("Assets/Sprites/Backdrops/DeathBackground.png")

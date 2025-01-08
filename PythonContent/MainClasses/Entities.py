@@ -13,6 +13,7 @@ def get_distance_from_actors(actor1,actor2):
 class Actor:
     def __init__(self, pos, icon):
         self.pos = pos
+
         self.icon = pygame.image.load(icon)
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.name = "Unknown"
@@ -54,6 +55,18 @@ class Door(Actor):
 
     #def __str__(self):
      #   print("Wall")
+class Health_component:
+    def __init__(self, actor_ref):
+        self.actor_ref = actor_ref
+        self.health = 100
+        self.max_health = 100
+    def take_damage(self, damage):
+        self.health -= damage
+        self.actor_ref.game.check_health()
+    def heal(self,intake):
+        self.health += intake
+        if self.health > self.max_health:
+            self.health = self.max_health
 class Inventory_component:
     def __init__(self, actor_ref):
         self.actor_ref = actor_ref
@@ -82,13 +95,13 @@ class Player(Actor):
         super().__init__(pos, icon)
         self.game = game
         self.inventory = Inventory_component(self)
+        self.health = Health_component(self)
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_east.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.resource = 0
         self.name = "You"
         self.weapon = None
         self.event = "search"
-
 
     def handle_input(self, event):
         move = (0, 0)
@@ -147,10 +160,15 @@ class Player(Actor):
         inv_backdrop.draw(game_surface)
         y_offset = 50
         for item in self.inventory.items:
+            if isinstance(item, Items.Weapon):
+                continue  # Skip rendering for weapons
+            item_name = item.name
             item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
-            item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
+            item_text.draw_text(game_surface, item_name, (game_surface.get_width() - 190, y_offset), 190)
+            if item.icon:
+                rescaled_icon = pygame.transform.scale(item.icon, (32, 32))
+                game_surface.blit(rescaled_icon, (game_surface.get_width() - 220, y_offset))
             y_offset += 30
-
 
     def handle_inventory_click(self, mouse_pos):
         y_offset = 50
@@ -167,6 +185,10 @@ class Player(Actor):
         distance = max(abs(self.pos[0] - target.pos[0]), abs(self.pos[1] - target.pos[1]))
         base_chance = 100 - (distance * 5)
         return max(min(base_chance, 95), 5)
+
+    def death(self):
+        print(f"{self.name} died")
+        pass
 
 class InventoryPopup:
     def __init__(self, item, pos, surface):
@@ -192,13 +214,14 @@ class InventoryPopup:
 class Hostile(Actor):
     def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
-        self.game = game  # Store the game reference
+        self.game = game
         self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Walker/walker.png")
         self.rect = pygame.Rect(pos, self.icon.get_size())
         self.name = "hostile"
         self.event = "attack"
         self.health = 5
-        self.alive = True  # Add an alive attribute
+        self.alive = True
+        self.damage = 12
 
     def is_spotted(self):
         return self.game.visibility_grid[self.pos[1]][self.pos[0]]
@@ -229,8 +252,7 @@ class Hostile(Actor):
                     print("moving")
     def attack(self, player_pos):
         print(f"{self.name} attacks the player at {player_pos}")
-        # Implement attack logic here
-
+        self.game.player.health.take_damage(self.damage)
     def find_path(self, target_pos):
         return Utils.a_star_search(self.game.grid, tuple(self.pos), tuple(target_pos), self.game)
 

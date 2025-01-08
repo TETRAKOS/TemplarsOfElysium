@@ -3,7 +3,7 @@ import pygame
 
 
 class Button:
-    def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255), enabled=True):
+    def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255), enabled=True, disabled_color=None,selected_color=None):
         self.text = text
         self.position = position
         self.size = size
@@ -12,14 +12,30 @@ class Button:
         self.text_color = text_color
         self.rect = pygame.Rect(position, size)
         self.enabled = enabled
+        self.selected = False
         self.text_renderer = TextRenderer(font, text_color)
+        if disabled_color is not None:
+            self.disabled_color = disabled_color
+        else:
+            self.disabled_color = None
+        if selected_color is not None:
+            self.selected_color = selected_color
+        else:
+            self.selected_color = None
 
     def draw(self, surface):
-        if not self.enabled:
-            disabled_color = (150, 150, 150)  # Example disabled color
-            pygame.draw.rect(surface, disabled_color, self.rect)
+        if self.selected:
+            pygame.draw.rect(surface, self.selected_color, self.rect)
         else:
-            pygame.draw.rect(surface, self.color, self.rect)
+            if not self.enabled:
+                if self.disabled_color is None:
+                    disabled_color = (150, 150, 150)  # Example disabled color
+                else:
+                    disabled_color = self.disabled_color
+                pygame.draw.rect(surface, disabled_color, self.rect)
+            else:
+                pygame.draw.rect(surface, self.color, self.rect)
+
 
         text_surfaces = self.text_renderer.render_text(self.text, self.rect.width)
         y_offset = (self.rect.height - sum(text_surface.get_height() for text_surface in text_surfaces)) // 2
@@ -44,13 +60,17 @@ class Button:
 
 
 class TextRenderer:
-    def __init__(self, font, color=(255, 255, 255)):
+    def __init__(self, font, color=(255, 255, 255),text = None):
         if not isinstance(font, pygame.font.Font):
             raise ValueError("font must be a pygame.font.Font object")
         self.font = font
         self.color = color
+        if text != None:
+            self.presaved = text
 
-    def render_text(self, text, max_width):
+    def render_text(self, text = None, max_width = 9999):
+        if text == None and self.presaved!= None:
+            text = self.presaved
         words = text.split(' ')
         lines = []
         current_line = []
@@ -68,12 +88,20 @@ class TextRenderer:
         text_surfaces = [self.font.render(line, True, self.color) for line in lines]
         return text_surfaces
 
-    def draw_text(self, surface, text, position, max_width):
+    def draw_text(self, surface, text, position, max_width, align='left'):
         text_surfaces = self.render_text(text, max_width)
         x, y = position
 
         for line_surface in text_surfaces:
-            surface.blit(line_surface, (x, y))
+            text_rect = line_surface.get_rect()
+            if align == 'center':
+                text_rect.centerx = x + max_width // 2
+            elif align == 'right':
+                text_rect.right = x + max_width
+            else:  # Default to left alignment
+                text_rect.left = x
+            text_rect.y = y
+            surface.blit(line_surface, text_rect)
             y += line_surface.get_height()
 class InputBox:
     def __init__(self, position, size, font):

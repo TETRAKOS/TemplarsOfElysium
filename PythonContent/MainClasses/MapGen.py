@@ -3,11 +3,7 @@ import random
 import Entities
 import json
 import os
-from  Mission_manager import Mission
-
-# ROOM_COUNT = 32
-# ROOM_MIN_SIZE = 10
-# ROOM_MAX_SIZE = 20
+from Mission_manager import Mission
 
 def sorting_key(value):
     if isinstance(value, Entities.Player):
@@ -62,13 +58,30 @@ class Grid:
         self.rooms = []
         room_layouts = self.load_room_layouts()
         room_content = self.load_room_content()
-        name, basic, danger, loot, final = self.mission.generate_mission()
+        name, basic, danger, loot, end = self.mission.generate_mission()
         layout_counts = {layout["layout"]: 0 for layout in room_layouts}
         attempts = 0
-        max_attempts = (basic+danger+loot) * 3  # Limit attempts to avoid infinite loops
+        max_attempts = (basic + danger + loot) * 3  # Limit attempts to avoid infinite loops
 
-        while len(self.rooms) < (basic+danger+loot) and attempts < max_attempts:
-            layout = random.choice(room_layouts)
+        # Find the elevator layout
+        elevator_layout = next(layout for layout in room_layouts if layout["layout"] == "elevator")
+
+        # Generate the first (elevator) room
+        room_width = elevator_layout["x"]
+        room_height = elevator_layout["y"]
+        x = random.randint(1, self.width - room_width - 2)
+        y = random.randint(1, self.height - room_height - 2)
+        first_room = (x, y, room_width, room_height, elevator_layout["layout"], elevator_layout["loot_value"],
+                      elevator_layout["danger"], elevator_layout["tile"])
+
+        self.add_room(first_room)
+        self.enrich_room(first_room, room_content)
+        self.rooms.append(first_room)
+        layout_counts[elevator_layout["layout"]] += 1
+
+        # Generate middle rooms
+        while len(self.rooms) < (basic + danger + loot - 1) and attempts < max_attempts:
+            layout = random.choice([l for l in room_layouts if l["layout"] != "elevator"])
             if layout_counts[layout["layout"]] >= layout["max_count"]:
                 attempts += 1
                 continue
@@ -77,7 +90,8 @@ class Grid:
             room_height = layout["y"]
             x = random.randint(1, self.width - room_width - 2)
             y = random.randint(1, self.height - room_height - 2)
-            new_room = (x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"], layout["tile"])
+            new_room = (
+                x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"], layout["tile"])
 
             if not any(self.overlap(new_room, r) for r in self.rooms):
                 self.add_room(new_room)
@@ -87,16 +101,44 @@ class Grid:
 
             attempts += 1
 
+        # Generate the last (elevator) room
+        x = random.randint(1, self.width - room_width - 2)
+        y = random.randint(1, self.height - room_height - 2)
+        last_room = (x, y, room_width, room_height, elevator_layout["layout"], elevator_layout["loot_value"],
+                     elevator_layout["danger"], elevator_layout["tile"])
+
+        while self.overlap(last_room, self.rooms[-1]):
+            x = random.randint(1, self.width - room_width - 2)
+            y = random.randint(1, self.height - room_height - 2)
+            last_room = (x, y, room_width, room_height, elevator_layout["layout"], elevator_layout["loot_value"],
+                         elevator_layout["danger"], elevator_layout["tile"])
+
+        self.add_room(last_room)
+        self.enrich_room(last_room, room_content)
+        self.rooms.append(last_room)
+        layout_counts[elevator_layout["layout"]] += 1
+
         # Connect rooms
         for i in range(1, len(self.rooms)):
             self.connect_rooms(self.rooms[i - 1], self.rooms[i])
 
         self.encase_rooms()
-        # self.add_random_items()
 
         print(f"Generated {len(self.rooms)} rooms")
         for layout, count in layout_counts.items():
             print(f"{layout}: {count}")
+
+        # Generate loot
+    def generate_loot(self):
+        for room in self.rooms:
+            if room[5] > 0:  # Check if the room has a non-zero loot value
+                x, y, _, _, _, loot_value, _, _ = room
+                num_loots = random.randint(1, loot_value)  # Adjust the range as needed
+                for _ in range(num_loots):
+                    loot_pos_x = random.randint(x + 1, x + room[2] - 2)  # Avoid placing on walls
+                    loot_pos_y = random.randint(y + 1, y + room[3] - 2)  # Avoid placing on walls
+                    self.set_cell(loot_pos_x, loot_pos_y, Entities.Loot(self.game, [loot_pos_x, loot_pos_y],
+                                                                        "Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png"))
 
     def get_starting_point(self):
         room = self.rooms[0]
@@ -348,3 +390,23 @@ class Grid:
         bottom_wall = any(isinstance(item, Entities.Wall) for item in neighbors[3])
 
         return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default wall
+
+    def generate_minimap(self):
+        minimap_surface = pygame.Surface((self.width, self.height))
+        minimap_surface.fill((0, 0, 0))  # Fill with black background
+
+        for y in range(self.height):
+            for x in range(self.width):
+                cell = self.get_cell(x, y)
+                color = (0, 0, 0)  # Default color (black for unexplored)
+
+                if any(isinstance(item, Entities.Wall) for item in cell):
+                    color = (100, 100, 100)
+                elif 'elv' in cell:
+                    color = (200, 200, 200)
+                elif any(isinstance(item, Entities.Actor) for item in cell):
+                    color = (0, 255, 0)
+
+                minimap_surface.set_at((x, y), color)
+
+        return minimap_surface

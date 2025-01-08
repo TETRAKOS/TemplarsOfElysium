@@ -23,3 +23,13 @@ class Mission:
         asset_path_file = os.path.join(missions_dir, 'Assets', 'dicts', 'mission_types.js')
         with open(asset_path_file, 'r') as f:
             return json.load(f)
+    def deploy_mission(self):
+        pass
+
+
+    def complete_mission(self):
+        pass
+
+
+    def end(self, result):
+        pass

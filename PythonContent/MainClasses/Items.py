@@ -12,9 +12,9 @@ class Item:
     def call_menu(self, inventory_ref):
         pass
     def use(self, inventory_ref):
-        inventory_ref.remove_item(self)
-        print(f"Used {self.name}!")
-        return True
+       # inventory_ref.remove_item(self)
+        print(f"Can't use {self.name}!")
+        return False
 
 class Material(Item):
     def __init__(self):
@@ -114,3 +114,37 @@ class Shard(Item):
         self.name = "Metal shard"
         self.description = "A shard of unknown metal."
         self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/Shard.png")
+class Cells(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Cells"
+        self.description = "A collection of powercells."
+        self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/cells.png")
+class Box(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Polygel box"
+        self.description = "A container with polygel."
+        self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/box.png")
+class MediPatch(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "MediPatch"
+        self.description = "A kit to restore small amount health."
+        self.icon = pygame.image.load("Assets/Sprites/Items/Medical/mediPatch.png")
+    def use(self, inventory_ref):
+        inventory_ref.actor_ref.health.heal(25)
+        inventory_ref.remove_item(self)
+        print(f"Healed with {self.name} by 25 HP!")
+        return True
+class MedInjector(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Medical Injector"
+        self.description = "A syringe filled with life-saving chemicals"
+        self.icon = pygame.image.load("Assets/Sprites/Items/Medical/Injector.png")
+    def use(self, inventory_ref):
+        inventory_ref.actor_ref.health.heal(50)
+        inventory_ref.remove_item(self)
+        print(f"Healed with {self.name} by 50 HP!")
+        return True

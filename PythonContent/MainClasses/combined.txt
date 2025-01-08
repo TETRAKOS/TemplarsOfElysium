@@ -1,0 +1,1700 @@
+==== Entities.py ====
+
+import pygame
+import Items
+import UIElements
+import Utils
+
+
+#from Overworld_game import Grid
+def get_distance_from_actors(actor1,actor2):
+    distance_x = abs(actor1.pos[0] - actor2.pos[0])
+    distance_y = abs(actor1.pos[1] - actor2.pos[1])
+    actor_distance = max(distance_x, distance_y)
+    return actor_distance
+class Actor:
+    def __init__(self, pos, icon):
+        self.pos = pos
+        self.icon = pygame.image.load(icon)
+        self.rect = pygame.Rect(pos, self.icon.get_size())
+        self.name = "Unknown"
+        self.event = "use"
+        self.collision = True
+    def onhover(self,event_pos):
+        return self.rect.collidepoint(event_pos)
+    def getinfo(self):
+        return self.name
+    def is_clicked(self, mouse_pos):
+        return self.event
+    def event_use(self, actor):
+        print(f"used by{actor}")
+        pass
+class Block(Actor):
+    def __init__(self, pos, sprite_path):
+        super().__init__(pos, sprite_path)
+        self.collision = True
+class Wall(Actor):
+    def __init__(self, pos, sprite_path):
+        super().__init__(pos, sprite_path)
+        self.name = "Concrete wall"
+class Door(Actor):
+    def __init__(self, pos, icon):
+        super().__init__(pos, icon)
+        self.name = "Door"
+        self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+        self.event = "use"
+        self.collision = True
+
+
+    def event_use(self,actor):
+        if self.collision:
+            self.collision = False
+            self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_opened.png")
+        else:
+            self.collision = True
+            self.icon = pygame.image.load("Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+
+    #def __str__(self):
+     #   print("Wall")
+class Inventory_component:
+    def __init__(self, actor_ref):
+        self.actor_ref = actor_ref
+        self.items = []
+
+    def add_item(self, item):
+        self.items.append(item)
+        print(f"Added {item.name} to inventory")
+
+    def remove_item(self, item):
+        if item in self.items:
+            self.items.remove(item)
+            print(f"Removed {item.name} from inventory")
+
+    def equip_weapon(self, weapon):
+        if isinstance(weapon, Items.Weapon):
+            if isinstance(self.actor_ref, Player):
+                self.actor_ref.equip_weapon(weapon)
+
+    def use_item(self, item):
+        if isinstance(item, Items.Item):
+            item.use(self)
+
+class Player(Actor):
+    def __init__(self, game, pos, icon):
+        super().__init__(pos, icon)
+        self.game = game
+        self.inventory = Inventory_component(self)
+        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_east.png")
+        self.rect = pygame.Rect(pos, self.icon.get_size())
+        self.resource = 0
+        self.name = "You"
+        self.weapon = None
+        self.event = "search"
+
+
+    def handle_input(self, event):
+        move = (0, 0)
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_w:
+                move = (0, -1)
+            elif event.key == pygame.K_s:
+                move = (0, 1)
+            elif event.key == pygame.K_a:
+                self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_west.png")
+                move = (-1, 0)
+            elif event.key == pygame.K_d:
+                self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_east.png")
+                move = (1, 0)
+        return move
+
+    def pass_turn(self):
+        self.game.pass_turn()
+
+    def equip_weapon(self, weapon):
+        self.weapon = weapon
+        print(f"Equipped {weapon.name}")
+
+    def attack(self, actor):
+        if isinstance(self.weapon, Items.Weapon):
+            if self.weapon.range >= get_distance_from_actors(self, actor):
+                self.weapon.attack(actor)
+                print(f"You attack {actor.name}")
+
+    def search(self):
+        print("You search around")
+
+    def use(self, actor):
+        if isinstance(actor, Actor) and not isinstance(actor, Hostile):
+            a_distance = get_distance_from_actors(self, actor)
+            if a_distance > 1:
+                self.observe(actor)
+            else:
+                self.interact(actor)
+
+    def observe(self, actor):
+        if isinstance(actor, Actor):
+            print(f"you looked at {actor.name}, it's too far to reach")
+        else:
+            print("incorrect Actor Type")
+
+    def interact(self, actor):
+        if isinstance(actor, Actor):
+            print(f"You using {actor.name}")
+            actor.event_use(self)
+        else:
+            print("incorrect Actor Type")
+
+    def render_inventory(self, game_surface):
+        inv_backdrop = UIElements.Rectangle(((game_surface.get_width() - 200), 0), (200, game_surface.get_height()), (70, 70, 70))
+        inv_backdrop.draw(game_surface)
+        y_offset = 50
+        for item in self.inventory.items:
+            item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
+            item_text.draw_text(game_surface, item.name, (game_surface.get_width() - 190, y_offset), 190)
+            y_offset += 30
+
+
+    def handle_inventory_click(self, mouse_pos):
+        y_offset = 50
+        for item in self.inventory.items:
+            item_rect = pygame.Rect((self.game.surface.get_width() - 190, y_offset), (190, 30))
+            if item_rect.collidepoint(mouse_pos):
+                self.game.popup = InventoryPopup(item, (mouse_pos[0], mouse_pos[1]), self.game.surface)
+                return
+            y_offset += 30
+
+    def calculate_hit_chance(self, target):
+        if not isinstance(self.weapon, Items.RangedWeapon):
+            return 0
+        distance = max(abs(self.pos[0] - target.pos[0]), abs(self.pos[1] - target.pos[1]))
+        base_chance = 100 - (distance * 5)
+        return max(min(base_chance, 95), 5)
+
+class InventoryPopup:
+    def __init__(self, item, pos, surface):
+        self.item = item
+        self.pos = pos
+        self.surface = surface
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+        self.use_button = UIElements.Button("Use", (pos[0], pos[1]), (50, 50), self.font)
+        self.discard_button = UIElements.Button("Discard", (pos[0] - 60, pos[1]), (75, 50), self.font)
+
+    def draw(self):
+        self.use_button.draw(self.surface)
+        self.discard_button.draw(self.surface)
+
+    def handle_click(self, mouse_pos):
+        if self.use_button.is_clicked(mouse_pos):
+            return "use"
+        elif self.discard_button.is_clicked(mouse_pos):
+            return "discard"
+        return None
+
+
+class Hostile(Actor):
+    def __init__(self, game, pos, icon):
+        super().__init__(pos, icon)
+        self.game = game  # Store the game reference
+        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Walker/walker.png")
+        self.rect = pygame.Rect(pos, self.icon.get_size())
+        self.name = "hostile"
+        self.event = "attack"
+        self.health = 5
+        self.alive = True  # Add an alive attribute
+
+    def is_spotted(self):
+        return self.game.visibility_grid[self.pos[1]][self.pos[0]]
+
+    def take_damage(self, damage):
+        self.health -= damage
+        if self.health <= 0:
+            print(f"{self.name} is dead")
+            self.death()
+
+    def death(self):
+        self.icon = pygame.image.load("Assets/Sprites/Entities/Creatures/Dead/dead.png")
+        self.alive = False
+        self.collision = False
+
+    def take_turn(self, player_pos):
+      #  print("Take turn")
+        if self.alive and self.is_spotted():
+            distance = max(abs(self.pos[0] - player_pos[0]), abs(self.pos[1] - player_pos[1]))
+            if distance <= 1:
+                self.attack(player_pos)
+
+            else:
+                path = self.find_path(player_pos)
+                print("find_path")
+                if path:
+                    self.move_towards(path)
+                    print("moving")
+    def attack(self, player_pos):
+        print(f"{self.name} attacks the player at {player_pos}")
+        # Implement attack logic here
+
+    def find_path(self, target_pos):
+        return Utils.a_star_search(self.game.grid, tuple(self.pos), tuple(target_pos), self.game)
+
+    def move_towards(self, path):
+        if path:
+            next_pos = path[0]
+            if not self.is_tile_occupied(next_pos):
+                self.game.grid.remove_from_cell(self.pos[0], self.pos[1], self)
+                self.pos = list(next_pos)
+                self.game.grid.set_cell(self.pos[0], self.pos[1], self)
+                self.rect.topleft = (self.pos[0] * self.game.grid.cell_size, self.pos[1] * self.game.grid.cell_size)
+                self.game.update_hostile_positions()
+                print(f"{self.name} moved to {self.pos}")
+
+    def is_tile_occupied(self, pos):
+        for hostile in self.game.enemies:
+            if hostile != self and hostile.pos == list(pos):
+                return True
+        return False
+
+
+class Walker(Hostile):
+    def __init__(self, pos):
+        super().__init__(pos, "Assets/Sprites/Entities/Creatures/Walker/walker.png")
+        self.name = "Walker"
+class Loot(Actor):
+    def __init__(self, game, pos, icon):
+        super().__init__(pos, icon)
+        self.game = game
+        self.items = [Items.Shard(), Items.smg(game.get_player_charater()), Items.surv_pistol(game.get_player_charater())]  # loot
+        self.name = "Bag with goods"
+        self.enabled = True
+
+    def event_use(self,player):
+        if self.enabled:
+            for item in self.items:
+                    self.game.player.inventory.add_item(item)
+            self.enabled = False
+            self.icon = pygame.image.load("Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png")
+            #self.items = []  # Clear the loot after picking up
+        return "use"
+
+==== Global.py ====
+
+import pygame
+#import sqlite3
+import sys
+import subprocess
+
+from PythonContent.MainClasses.UIElements import ImageButton
+from UIElements import Button, TextRenderer
+
+
+class Shell:
+    def __init__(self):
+        pygame.init()
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
+        self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+       # self.button_font = TextRenderer(self.font, color=(255, 255, 255))
+        self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
+        pygame.display.set_caption("Templars of Elysium - Planning")
+        self.surface = pygame.display.set_mode((1024, 600))
+        self.bgc = (45, 48, 44)
+        self.b_bgc = (35, 38, 34)
+        self.selected_fcl = None
+        pygame.display.set_icon(self.gameIcon)
+        if len(sys.argv) > 1:
+            self.profile = sys.argv[1]
+            print(self.profile)
+            self.mission_screen()
+        else:
+            print("No profile specified")
+            self.mission_screen()
+    def mission_screen(self):
+        factory_d = pygame.image.load("Assets/Sprites/Entities/Buildings/Factory/Factory_default.png")
+        factory_h = pygame.image.load("Assets/Sprites/Entities/Buildings/Factory/Factory_highlighted.png")
+        factory_s = pygame.image.load("Assets/Sprites/Entities/Buildings/Factory/Factory_selected.png")
+        admin_d = pygame.image.load("Assets/Sprites/Entities/Buildings/Administration/admin_default.png")
+        admin_h = pygame.image.load("Assets/Sprites/Entities/Buildings/Administration/admin_highlight.png")
+        admin_s = pygame.image.load("Assets/Sprites/Entities/Buildings/Administration/admin_selected.png")
+        gardens_d = pygame.image.load("Assets/Sprites/Entities/Buildings/Gardens/Gardens_default.png")
+        gardens_h = pygame.image.load("Assets/Sprites/Entities/Buildings/Gardens/Gardens_highlight.png")
+        gardens_s = pygame.image.load("Assets/Sprites/Entities/Buildings/Gardens/Gardens_selected.png")
+        tower_countur = pygame.image.load("Assets/Sprites/Entities/Buildings/Tower/tower_back.png")
+        tower_cb = tower_countur.get_rect(center=(500, (self.surface.get_height() // 2)))
+        command_image = pygame.image.load("Assets/Sprites/Entities/Buildings/Tower/Tower.png")
+        command_pl = (526,59)
+        circle_map = pygame.image.load("Assets/Sprites/Backdrops/Circle.png")
+        circle_image = circle_map.get_rect(center=(500, (self.surface.get_height() // 2)))
+        raid_main = TextRenderer(self.font, color=(255, 255, 255))
+        raid_description=TextRenderer(self.font_small, color=(255, 255, 255))
+        prep_raid_btn = Button("Prepare for intrusion", (50, 450), (300, 75), self.font, enabled=False)
+
+        raid_btn, tech_btn, info_btn,misc_btn = self.low_buttons_array("Mission")
+        save_btn, load_btn, options_btn, quit_btn = self.high_buttons_array()
+        haz1_bld = ImageButton(factory_d, factory_h,factory_s,(500,116),(122,292))
+        haz2_bld = ImageButton(admin_d, admin_h,admin_s,(412,46),(170,260))
+        haz3_bld = ImageButton(gardens_d, gardens_h, gardens_s,(380,200),(162,259))
+        raid_mt = "Select facility for intrusion"
+        raid_subt = ("Different facilities store different"
+                     " types of resources, choose as needed")
+        menu_running = True
+        while menu_running:
+            mouse_pos = pygame.mouse.get_pos()
+            for event in pygame.event.get():
+            #    print(mouse_pos)
+                if event.type == pygame.QUIT:
+                    menu_running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if raid_btn.is_clicked(event.pos):
+                            print("Raid Button Clicked")
+                    elif tech_btn.is_clicked(event.pos):
+                            self.tech_menu()
+                            menu_running = False
+
+                    elif info_btn.is_clicked(event.pos):
+                            print("Info Button Clicked")
+                    elif misc_btn.is_clicked(event.pos):
+                            print("Misc Button Clicked")
+                    elif haz1_bld.is_clicked(event.pos):
+                         haz1_bld.in_focus(True)
+                         haz2_bld.in_focus(False),haz3_bld.in_focus(False)
+                         print("Factory Button Clicked")
+                         raid_mt = "Factory"
+                         raid_subt = ("Production part of the Tower, storing mechanical components and engineering "
+                                      "blueprints, occupied by the Cult of the Hammer, high-tech aggressive combatants,"
+                                      "high environment hazards, mechanical threats")
+                         self.selected_fcl = "Factory"
+                    elif haz2_bld.is_clicked(event.pos):
+                        haz2_bld.in_focus(True)
+                        haz3_bld.in_focus(False), haz1_bld.in_focus(False)
+                        print("Admin Button Clicked")
+                        raid_mt = "Administration"
+                        raid_subt = ("Control part of the Tower, managing the Tower's resources, stores a lot of "
+                                     "important administrative data, signs of scavengers and mutants, automated defense systems,"
+                                      "low-tech nature of office environment suggest low chance of environment hazards")
+                        self.selected_fcl = "Administration"
+                    elif haz3_bld.is_clicked(event.pos):
+                        haz3_bld.in_focus(True)
+                        haz2_bld.in_focus(False), haz1_bld.in_focus(False)
+                        print("Gardens Button Clicked")
+                        raid_mt = "Gardens"
+                        raid_subt = ("Gardens part of the Tower, stores food, water, and other necessary resources,"
+                                     "biological hazard, occasional burst of mutated flora and fauna "
+                                     "spreads all over different sections of tower, miriade of semi-sentient hostile "
+                                     "entities, high-tech nature of the gardens and distorted nature suggests"
+                                     " that this is a hazardous environment")
+                        self.selected_fcl = "Gardens"
+                    elif save_btn.is_clicked(event.pos):
+                        print("Save Button Clicked")
+                    elif load_btn.is_clicked(event.pos):
+                        print("Load Button Clicked")
+                    elif prep_raid_btn.is_clicked(event.pos):
+                        print("Preparation for Raid Button Clicked")
+                        subprocess.Popen([sys.executable, "Overworld_game.py"])
+                    elif options_btn.is_clicked(event.pos):
+                        print("Options Button Clicked")
+                    elif quit_btn.is_clicked(event.pos):
+                        menu_running = False
+
+                haz1_bld.update(mouse_pos)
+                haz2_bld.update(mouse_pos)
+                haz3_bld.update(mouse_pos)
+                self.surface.fill(self.bgc)
+                prep_raid_btn.set_enabled(True if self.selected_fcl != None else False)
+                prep_raid_btn.update_text("Prepare for intrusion" if self.selected_fcl!= None else "Select the facility")
+             #   self.surface.blit(circle_map, command)
+                self.surface.blit(tower_countur, tower_cb)
+                raid_btn.draw(self.surface), tech_btn.draw(self.surface),info_btn.draw(self.surface),misc_btn.draw(self.surface)
+                save_btn.draw(self.surface),load_btn.draw(self.surface), options_btn.draw(self.surface), quit_btn.draw(self.surface)
+                haz1_bld.draw(self.surface)
+                haz2_bld.draw(self.surface)
+                haz3_bld.draw(self.surface)
+                prep_raid_btn.draw(self.surface)
+
+                self.surface.blit(command_image, command_pl)
+                raid_main.draw_text(self.surface,raid_mt,(20,15),800)
+                raid_description.draw_text(self.surface,raid_subt, (20,60),380)
+                pygame.display.flip()
+
+
+    def high_buttons_array(self):
+        save_btn = Button("Save", (620, 0), (100, 25), self.font_small, self.b_bgc,)
+        load_btn = Button("Load", (720, 0), (100, 25), self.font_small, self.b_bgc,)
+        options_btn = Button("Options", (820, 0), (100, 25), self.font_small, self.b_bgc,)
+        quit_btn = Button("Quit", (920, 0), (100, 25), self.font_small, self.b_bgc,)
+        return save_btn, load_btn, options_btn, quit_btn
+    def low_buttons_array(self, state):
+        raid_btn = Button("Mission", (50, 550), (225, 50), self.font, self.b_bgc,enabled=True)
+        if state == "Mission":
+            raid_btn.set_enabled(False)
+        tech_btn = Button("Tech", (275, 550), (225, 50), self.font, self.b_bgc, enabled=True)
+        if state == "Tech":
+            tech_btn.set_enabled(False)
+        units_btn = Button("Units", (500, 550), (225, 50), self.font, self.b_bgc, enabled=True)
+        if state == "Units":
+            units_btn.set_enabled(False)
+        info_btn = Button("Info", (725, 550), (225, 50), self.font, self.b_bgc, enabled=True)
+        if state == "Info":
+            info_btn.set_enabled(False)
+        return raid_btn,tech_btn,units_btn,info_btn
+    def tech_menu(self):
+        raid_b, tech_b, gear_b, info_b = self.low_buttons_array('Tech')
+        t_running=True
+        while t_running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    t_running = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if raid_b.is_clicked(event.pos):
+                        self.mission_screen()
+                        t_running = False
+                    elif tech_b.is_clicked(event.pos):
+                        print("none")
+                    elif gear_b.is_clicked(event.pos):
+                        print("Units")
+                    elif info_b.is_clicked(event.pos):
+                        print("info")
+            self.surface.fill(self.bgc)
+            raid_b.draw(self.surface), tech_b.draw(self.surface), gear_b.draw(self.surface), info_b.draw(
+                self.surface)
+            pygame.display.flip()
+
+# class District:
+#     pass
+
+shell = Shell()
+
+
+==== Items.py ====
+
+import pygame
+import Entities
+import time
+import Utils
+import random
+
+class Item:
+    def __init__(self):
+        self.name = "Unknown"
+        self.description = "No description provided."
+        self.icon = None
+    def call_menu(self, inventory_ref):
+        pass
+    def use(self, inventory_ref):
+        inventory_ref.remove_item(self)
+        print(f"Used {self.name}!")
+        return True
+
+class Material(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Material"
+
+class Weapon(Item):
+    def __init__(self, player_ref):
+        super().__init__()
+        self.player_ref = player_ref
+        self.damage = 0
+        self.range = 0
+
+    def attack(self, actor):
+        pass
+
+class RangedWeapon(Weapon):
+    def __init__(self, player_ref):
+        super().__init__(player_ref)
+        self.range = 6
+        self.damage = 2
+        self.ammo = 2
+        self.max_ammo = 2
+        self.name = "ranged Weapon"
+        self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+        self.accuracy = 100
+        pygame.mixer.init()
+
+    def calculate_hit_chance(self, distance):
+        return max(0, self.accuracy - (distance * 10))
+
+    def attack(self, actor):
+        self.fire_at(actor)
+        self.player_ref.pass_turn()
+
+    def fire_at(self, enemy):
+        distance = Utils.get_distance_from_actors(self.player_ref, enemy)
+        hit_chance = self.calculate_hit_chance(distance)
+        if self.ammo > 0:
+            self.ammo -= 1
+            if random.randint(1, 100) <= hit_chance:
+                enemy.take_damage(self.damage)
+                print(f"Fired at {enemy.name} for {self.damage} damage!")
+            else:
+                pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+                pygame.mixer.music.play()
+                print("missed")
+                if isinstance(self.player_ref, Entities.Player):
+                    return None  # Indicate a miss
+            pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+            pygame.mixer.music.play()
+            if isinstance(self.player_ref, Entities.Player):
+      #         self.player_ref.pass_turn()
+                return enemy.pos  # Return the position of the hit
+
+        else:
+            print("no ammo!")
+            return None  # Indicate a miss
+
+    def reload(self):
+        self.ammo = self.max_ammo
+        print("Reloaded!")
+        pygame.mixer.music.load("Assets/Sound/sfx/small_reload/smReload.wav")
+        pygame.mixer.music.play()
+        if isinstance(self.player_ref, Entities.Player):
+            self.player_ref.pass_turn()
+
+class surv_pistol(RangedWeapon):
+    def __init__(self, player_ref):
+        super().__init__(player_ref)
+        self.damage = 1
+        self.range = 4
+        self.ammo = 2
+        self.name = "Survival Pistol"
+        self.icon = "Assets/Sprites/Items/Weapons/surv_gun.png"
+
+class smg(RangedWeapon):
+    def __init__(self, player_ref):
+        super().__init__(player_ref)
+        self.damage = 2
+        self.range = 10
+        self.ammo = 30
+        self.max_ammo = 30
+        self.name = "SMG"
+        self.icon = "Assets/Sprites/Items/Weapons/smg.png"
+    def attack(self, actor):
+        for i in range(3):
+            self.fire_at(actor)
+            pygame.mixer.music.load('Assets/Sound/sfx/smallarms_fire/sm1.wav')
+            pygame.mixer.music.play()
+            time.sleep(0.075)
+        self.player_ref.pass_turn()
+
+class Shard(Item):
+    def __init__(self):
+        super().__init__()
+        self.name = "Metal shard"
+        self.description = "A shard of unknown metal."
+        self.icon = pygame.image.load("Assets/Sprites/Items/Materials/Shard/Shard.png")
+
+==== Main_menu.py ====
+
+import pygame
+from UIElements import TextRenderer, Button, InputBox
+import subprocess, os, sys
+import sqlite3
+
+
+class Menu:
+    def __init__(self):
+        pygame.init()
+        pygame.mixer.init()
+        self.font_path = os.path.join("HomeVideo-Regular", "Assets/fonts/Game/HomeVideo-Regular.otf")
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 48)
+        self.button_font = TextRenderer(self.font, color=(255, 255, 255))
+        self.music = pygame.mixer.Sound("Assets/Sound/Music/TE_menu.wav")
+        self.music.set_volume(0.4)
+        self.music.play(-1)
+
+        self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
+        pygame.display.set_caption("Templars of Elysium")
+
+        self.surface = pygame.display.set_mode((800, 600))
+        self.bgc = (45, 48, 44)
+        pygame.display.set_icon(self.gameIcon)
+
+    def run_menu(self):
+        quit_button = Button("Quit", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
+        options_button = Button("Game Properties", ((self.surface.get_width() - 470), 480), (450, 50), self.font,
+                                enabled=True)
+        instant_action_button = Button("Instant Action", ((self.surface.get_width() - 420), 420), (400, 50),
+                                       self.font, enabled=True)
+        campaign_button = Button("Campaign", ((self.surface.get_width() - 260), 360), (240, 50), self.font,
+                                 enabled=True)
+        game_logo = self.gameIcon.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
+        game_logo_sized = pygame.transform.scale(self.gameIcon, (256, 256))
+        running_menu = True
+        while running_menu:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running_menu = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if quit_button.is_clicked(event.pos):
+                        running_menu = False
+                    if instant_action_button.is_clicked(event.pos):
+                        subprocess.Popen([sys.executable, "CombatGrid.py"])
+                    if campaign_button.is_clicked(event.pos):
+                        self.Run_CampaignMenu()
+                        return
+
+            self.surface.fill(self.bgc)
+
+            name_render = TextRenderer(self.font, color=(255, 255, 255))
+            name_render.draw_text(self.surface, "TEMPLARS OF ELYSIUM", (20, 20), 2000)
+
+            # Draw the buttons
+            self.surface.blit(game_logo_sized, game_logo)
+            options_button.draw(self.surface)
+            quit_button.draw(self.surface)
+            instant_action_button.draw(self.surface)
+            campaign_button.draw(self.surface)
+
+            pygame.display.flip()
+
+    def new_game_menu(self):
+        create_button = Button("confirm", ((self.surface.get_width() - 280), 480), (260, 50), self.font,
+                               enabled=True)
+        name_ib = InputBox(((self.surface.get_width() - 480), 480,), (200, 50), self.font)
+        back_btn = Button("return", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
+        ng_run = True
+        while ng_run:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    ng_run = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if create_button.is_clicked(event.pos):
+                        self.new_gameSQL(name_ib.get_name())
+                        # with open("GameData/menuD.txt", "w") as s:
+                        #     f = name_ib.get_name()
+                        #     s.write(f)
+                        subprocess.Popen([sys.executable, "Global.py", name_ib.get_name()])
+                    elif back_btn.is_clicked(event.pos):
+                        self.Run_CampaignMenu()
+                        ng_run = False
+                name_ib.handle_event(event)
+            self.surface.fill(self.bgc)
+            create_button.draw(self.surface)
+            back_btn.draw(self.surface)
+            name_ib.draw(self.surface)
+            pygame.display.flip()
+
+    def new_gameSQL(self, profile_name=None):
+        connection = sqlite3.connect("GameData/players.db")
+        self.cursor = connection.cursor()
+        if profile_name is not None:
+            profile_dir = "GameData/" + profile_name + ".db"
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS player(
+                        id INTEGER,
+                        profile_dir TEXT NOT NULL,
+                        profile_name TEXT NOT NULL)
+                        ''')
+            self.cursor.execute('SELECT COUNT(*) FROM player')
+            counter = self.cursor.fetchone()[0]
+            self.cursor.execute('''INSERT INTO player (id, profile_dir, profile_name) 
+                                           VALUES (?, ?, ?)''', (counter, profile_dir, profile_name))
+            connection.commit()
+
+            # Create a new profile database
+            profile = sqlite3.connect("GameData/Profiles/" + profile_name + ".db")
+            pcursor = profile.cursor()
+            pcursor.execute('''CREATE TABLE IF NOT EXISTS profile_data(
+                        day INTEGER,
+                        tech TEXT NOT NULL,
+                        advances TEXT NOT NULL,
+                        storage TEXT NOT NULL
+                        )''')
+
+            profile.commit()
+            pcursor.close()
+            profile.close()
+
+        self.cursor.close()
+        connection.close()
+    def Run_CampaignMenu(self):
+        new_btn = Button("New Game", ((self.surface.get_width() - 280), 480), (260, 50), self.font, enabled=True)
+        back_btn = Button("Back", ((self.surface.get_width() - 220), 540), (200, 50), self.font, enabled=True)
+        loadgame_btn = Button("Load Game", ((self.surface.get_width() - 280), 420), (260, 50), self.font,
+                              enabled=True)
+        continue_btn = Button("Continue", ((self.surface.get_width() - 260), 360), (240, 50), self.font,
+                              enabled=True)
+        typer_render = TextRenderer(self.font, color=(255, 255, 255))
+        land_image = pygame.image.load("Assets/Sprites/Screens/landing.png")
+        game_logo = land_image.get_rect(center=(120, (self.surface.get_height() // 2) - 150))
+        game_logo_sized = pygame.transform.scale(land_image, (256, 256))
+
+        running_menu = True
+        while running_menu:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running_menu = False
+                if event.type == pygame.MOUSEBUTTONDOWN:  # Corrected line
+                    if back_btn.is_clicked(event.pos):
+                        self.run_menu()
+                        running_menu = False  # Exit the campaign menu
+                        return
+                    if new_btn.is_clicked(event.pos):
+                        self.new_game_menu()
+                        return
+                    #                subprocess.Popen([sys.executable, "Global.py"])
+                    if loadgame_btn.is_clicked(event.pos):
+                        print("Loading game...")
+                    if continue_btn.is_clicked(event.pos):
+                        # print("Continuing game...")
+                        conn = sqlite3.connect("GameData/players.db")
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT * FROM player ORDER BY id DESC LIMIT 1")
+                        last_save = cursor.fetchone()
+                        pygame.display.iconify()
+                        subprocess.Popen([sys.executable, "Global.py", last_save[2]])
+            self.surface.fill(self.bgc)  # Clear the surface for the campaign menu
+            new_btn.draw(self.surface)
+            back_btn.draw(self.surface)
+            loadgame_btn.draw(self.surface)
+            continue_btn.draw(self.surface)
+            self.surface.blit(game_logo_sized, game_logo)
+            typer_render.draw_text(self.surface, "Campaign Mode", (20, 20),2000)
+            pygame.display.flip()
+        pygame.quit()
+
+
+if __name__ == "__main__":
+    menu = Menu()
+    menu.run_menu()
+
+
+==== MapGen.py ====
+
+import pygame
+import random
+import Entities
+import json
+import os
+
+ROOM_COUNT = 32
+ROOM_MIN_SIZE = 10
+ROOM_MAX_SIZE = 20
+
+def sorting_key(value):
+    if isinstance(value, Entities.Player):
+        return 0
+    elif isinstance(value, Entities.Hostile):
+        return 1
+    elif isinstance(value, Entities.Actor):
+        return 2
+    elif isinstance(value, Entities.Wall):
+        return 3
+    elif isinstance(value, str):
+        return 4
+    else:
+        return 5
+
+class Grid:
+    def __init__(self, width, height, cell_size, game):
+        self.game = game
+        self.width = width
+        self.height = height
+        self.cell_size = cell_size
+        self.grid = [[[] for _ in range(width)] for _ in range(height)]
+        self.rooms = []
+        self.images = {}
+        self.asset_paths = self.load_asset_paths()
+        self.load_images()
+
+    def load_asset_paths(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'asset_paths.js')
+        with open(asset_path_file, 'r') as f:
+            return json.load(f)
+
+    def load_room_layouts(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'rooms_layout.js')
+        with open(asset_path_file, 'r') as f:
+            return json.load(f)
+
+    def load_room_content(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        asset_path_file = os.path.join(script_dir, 'Assets', 'dicts', 'rooms_content.js')
+        with open(asset_path_file, 'r') as f:
+            return json.load(f)
+
+    def load_images(self):
+        for key, path in self.asset_paths.items():
+            self.images[key] = pygame.image.load(path)
+
+    def generate_dungeon(self):
+        self.rooms = []
+        room_layouts = self.load_room_layouts()
+        room_content = self.load_room_content()
+
+        layout_counts = {layout["layout"]: 0 for layout in room_layouts}
+        attempts = 0
+        max_attempts = ROOM_COUNT * 3  # Limit attempts to avoid infinite loops
+
+        while len(self.rooms) < ROOM_COUNT and attempts < max_attempts:
+            layout = random.choice(room_layouts)
+            if layout_counts[layout["layout"]] >= layout["max_count"]:
+                attempts += 1
+                continue
+
+            room_width = layout["x"]
+            room_height = layout["y"]
+            x = random.randint(1, self.width - room_width - 2)
+            y = random.randint(1, self.height - room_height - 2)
+            new_room = (x, y, room_width, room_height, layout["layout"], layout["loot_value"], layout["danger"], layout["tile"])
+
+            if not any(self.overlap(new_room, r) for r in self.rooms):
+                self.add_room(new_room)
+                self.enrich_room(new_room, room_content)
+                self.rooms.append(new_room)
+                layout_counts[layout["layout"]] += 1
+
+            attempts += 1
+
+        # Connect rooms
+        for i in range(1, len(self.rooms)):
+            self.connect_rooms(self.rooms[i - 1], self.rooms[i])
+
+        self.encase_rooms()
+        # self.add_random_items()
+
+        print(f"Generated {len(self.rooms)} rooms")
+        for layout, count in layout_counts.items():
+            print(f"{layout}: {count}")
+
+    def get_starting_point(self):
+        room = self.rooms[0]
+        x = (room[0])
+        y = (room[1])
+        print(x, y)
+        return [x, y]
+
+    def add_random_items(self):
+        items = ["d", "g"]  # "d" for dust, "g" for garbage
+        for room in self.rooms:
+            x, y, width, height, layout, loot_value, danger, tile = room
+            num_items = random.randint(5, 15)  # Adjust the range as needed
+            for _ in range(num_items):
+                item = random.choice(items)
+                attempts = 0
+                while attempts < 10:  # Limit attempts to avoid infinite loop
+                    item_x = random.randint(x + 1, x + width - 2)  # Avoid placing on walls
+                    item_y = random.randint(y + 1, y + height - 2)  # Avoid placing on walls
+                    if self.cell_contains(item_x, item_y, tile) and not self.cell_contains(item_x, item_y, item):
+                        self.set_cell(item_x, item_y, item)
+                        print(f"Item {item} added at ({item_x}, {item_y})")
+                        break
+                    attempts += 1
+
+    def find_closest_room(self, room):
+        x1, y1, _, _ = room
+        center1 = (x1 + (room[2] // 2), y1 + (room[3] // 2))
+
+        closest_room = None
+        closest_distance = float('inf')
+
+        for existing_room in self.rooms:
+            if existing_room == room:
+                continue
+
+            x2, y2, _, _ = existing_room
+            center2 = (x2 + (existing_room[2] // 2), y2 + (existing_room[3] // 2))  # Center of the existing room
+
+            distance = ((center1[0] - center2[0]) ** 2 + (center1[1] - center2[1]) ** 2) ** 0.5
+
+            if distance < closest_distance:
+                closest_distance = distance
+                closest_room = existing_room
+
+        return closest_room
+
+    def overlap(self, new_room, existing_room):
+        x1, y1, w1, h1 = new_room[:4]
+        x2, y2, w2, h2 = existing_room[:4]
+        return not (x1 + w1 <= x2 or x2 + w2 <= x1 or y1 + h1 <= y2 or y2 + h2 <= y1)
+
+    def add_room(self, room):
+        x, y, width, height, layout, loot_value, danger, tile = room
+        for i in range(y, y + height):
+            for j in range(x, x + width):
+                self.set_cell(j, i, tile)  # Set floor tile
+
+    def enrich_room(self, room, room_content):
+        x, y, width, height, layout, loot_value, danger, tile = room
+        items = ["d", "g", "s", "r"]  # "d" for dust, "g" for garbage
+        for i in range(danger):
+            xr = x + random.randint(1, width - 2)
+            yr = y + random.randint(1, height - 2)
+            enemy_to_add = Entities.Hostile(self.game, [xr, yr], "Assets/Sprites/Entities/Creatures/Walker/walker.png")
+            self.set_cell(xr, yr, enemy_to_add)
+            self.game.enemies.append(enemy_to_add)
+
+        # Add room-specific content
+        for content in room_content:
+            if content["layout"] == layout:
+                for item in content["content"]:
+                    pos_x, pos_y = item["position"]
+                    texture_path = item["texture"]
+                    item_x = x + pos_x
+                    item_y = y + pos_y
+                    self.set_cell(item_x, item_y, Entities.Actor(pos=[item_x, item_y], icon=texture_path))
+
+        num_items = random.randint(1, 20)  # Adjust the range as needed
+        for _ in range(num_items):
+            item = random.choice(items)
+            item_x = random.randint(x + 1, x + width - 2)  # Avoid placing on walls
+            item_y = random.randint(y + 1, y + height - 2)  #^
+            self.set_cell(item_x, item_y, item)
+             #   break
+        # for s in range(loot_value):
+        #     xr = x + random.randint(1, width - 2)
+        #     yr = y + random.randint(1, height - 2)
+        #     self.set_cell(xr,yr,Entities.Loot(self.game,[xr,yr],"Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png"))
+
+    def encase_rooms(self):
+        for y in range(self.height):
+            for x in range(self.width):
+                if self.cell_contains(x, y, '.'):
+                    if x - 1 >= 0 and self.cell_contains(x - 1, y, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Left
+                        self.set_cell(x - 1, y, self.get_wall_sprite((x - 1, y)))
+                    if x + 1 < self.width and self.cell_contains(x + 1, y, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Right
+                        self.set_cell(x + 1, y, self.get_wall_sprite((x + 1, y)))
+                    if y - 1 >= 0 and self.cell_contains(x, y - 1, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Top
+                        self.set_cell(x, y - 1, self.get_wall_sprite((x, y - 1)))
+                    if y + 1 < self.height and self.cell_contains(x, y + 1, ".") is None and self.cell_contains(x - 1, y, Entities.Actor) is None:  # Bottom
+                        self.set_cell(x, y + 1, self.get_wall_sprite((x, y + 1)))
+
+    def connect_rooms(self, room1, room2):
+        x1, y1, w1, h1 = room1[:4]
+        x2, y2, w2, h2 = room2[:4]
+
+        # Calculate the centers of the rooms
+        center1 = (x1 + w1 // 2, y1 + h1 // 2)
+        center2 = (x2 + w2 // 2, y2 + h2 // 2)
+
+        # Determine the closest points on the edges of the rooms
+        if center1[0] < center2[0]:  # room1 is to the left of room2
+            edge1_x = x1 + w1
+            edge2_x = x2
+        else:  # room1 is to the right of room2
+            edge1_x = x1
+            edge2_x = x2 + w2
+
+        if center1[1] < center2[1]:  # room1 is above room2
+            edge1_y = y1 + h1
+            edge2_y = y2
+        else:  # room1 is below room2
+            edge1_y = y1
+            edge2_y = y2 + h2
+
+        # Find the closest points on the vertical and horizontal edges
+        if abs(edge1_x - edge2_x) > abs(edge1_y - edge2_y):
+            # Horizontal corridor is longer, so connect vertically first
+            edge1 = (edge1_x, random.randint(y1, y1 + h1 - 1))
+            edge2 = (edge2_x, random.randint(y2, y2 + h2 - 1))
+            self.draw_horizontal_corridor(edge1[0], edge2[0], edge1[1])
+            self.draw_vertical_corridor(edge1[1], edge2[1], edge2[0])
+        else:
+            # Vertical corridor is longer, so connect horizontally first
+            edge1 = (random.randint(x1, x1 + w1 - 1), edge1_y)
+            edge2 = (random.randint(x2, x2 + w2 - 1), edge2_y)
+            self.draw_vertical_corridor(edge1[1], edge2[1], edge1[0])
+            self.draw_horizontal_corridor(edge1[0], edge2[0], edge2[1])
+
+        # Place a door at the starting point of the corridor
+        door = Entities.Door((edge1[0], edge1[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+        door2 = Entities.Door((edge2[0], edge2[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
+        self.set_cell(edge1[0], edge1[1], door)
+        self.set_cell(edge2[0], edge2[1], door2)
+
+    def draw_horizontal_corridor(self, x1, x2, y):
+        for x in range(min(x1, x2), max(x1, x2) + 1):
+            self.set_cell(x, y, "bw")
+            cell = self.grid[y][x]
+            if "r" and "." in cell:
+                self.remove_from_cell(x, y, "bw")
+
+    def draw_vertical_corridor(self, y1, y2, x):
+        for y in range(min(y1, y2), max(y1, y2) + 1):
+            self.set_cell(x, y, "bn")
+            cell = self.grid[y][x]
+            if "bn" and "." in cell:
+                self.remove_from_cell(x, y, "bn")
+        min_y, max_y = min(y1, y2), max(y1, y2)
+        for y in [min_y, max_y]:
+            cell_v = self.get_cell(x, y)
+            if "bn" in cell_v:
+                if (y == min_y and "." in self.get_cell(x, y - 1)) or \
+                        (y == max_y and "." in self.get_cell(x, y + 1)):
+                    self.remove_from_cell(x, y, "bn")
+
+    def set_cell(self, x, y, value):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid[y][x].append(value)
+            self.sort_cell(x, y)
+
+    def remove_from_cell(self, x, y, actor):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            if actor in self.grid[y][x]:  # Ensure the actor exists in the cell before removing it
+                self.grid[y][x].remove(actor)
+
+    def sort_cell(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            self.grid[y][x].sort(key=sorting_key)
+
+    def get_cell(self, x, y):
+        if 0 <= x < self.width and 0 <= y < self.height:
+            return self.grid[y][x]
+        return []
+
+    def cell_contains(self, x, y, value):
+        cell = self.get_cell(x, y)
+        for item in cell:
+            if isinstance(item, type(value)) or item == value:
+                return item
+        return None
+
+    def draw(self, surface, camera, visibility_grid):
+        floor_sprites = []
+        decor_sprites = []
+        actor_sprites = []
+
+        for y in range(self.height):
+            for x in range(self.width):
+                if visibility_grid[y][x]:
+                    rect = pygame.Rect(x * self.cell_size - camera[0], y * self.cell_size - camera[1], self.cell_size,
+                                       self.cell_size)
+                    cell_values = self.grid[y][x]
+                    for value in cell_values:
+                        if value in self.images:
+                            if value == '.' or value == 'sci' or value == 'str':
+                                floor_sprites.append((self.images[value], rect))
+                            else:
+                                decor_sprites.append((self.images[value], rect))
+                        if isinstance(value, Entities.Actor):
+                            actor_sprites.append((value.icon, rect))
+
+        # Render floor sprites
+        for image, rect in floor_sprites:
+            surface.blit(image, rect)
+
+        # Render decor sprites
+        for image, rect in decor_sprites:
+            surface.blit(image, rect)
+
+        # Render actor sprites
+        for image, rect in actor_sprites:
+            surface.blit(image, rect)
+
+    def get_actors(self):
+        actors = []
+        for y in range(self.height):
+            for x in range(self.width):
+                cell_values = self.grid[y][x]
+                for value in cell_values:
+                    if isinstance(value, Entities.Actor):
+                        actors.append(value)
+        return actors
+
+    def get_wall_sprite(self, pos):
+        x, y = pos
+        neighbors = [
+            self.get_cell(x - 1, y),  # Left
+            self.get_cell(x + 1, y),  # Right
+            self.get_cell(x, y - 1),  # Top
+            self.get_cell(x, y + 1)  # Bottom
+        ]
+
+        # Check if neighbors are walls
+        left_wall = any(isinstance(item, Entities.Wall) for item in neighbors[0])
+        right_wall = any(isinstance(item, Entities.Wall) for item in neighbors[1])
+        top_wall = any(isinstance(item, Entities.Wall) for item in neighbors[2])
+        bottom_wall = any(isinstance(item, Entities.Wall) for item in neighbors[3])
+
+        return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default wall
+
+
+==== Mission_Manager.py ====
+
+
+
+==== Overworld_game.py ====
+
+import pygame
+import Entities
+from Entities import Player, Hostile, Actor, Loot
+from UIElements import Rectangle, TextRenderer, Button
+#import Shaders
+import Items
+import MapGen
+import math
+class Game:
+    def __init__(self):
+        pygame.init()
+        self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
+        self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
+        self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
+        self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
+        pygame.display.set_icon(self.gameIcon)
+        self.highlight = None  # (x, y, (color), end_time)
+        self.surface = pygame.display.set_mode((1024, 724))
+        self.bgc = (20, 25, 27)
+        self.bgcd = (15, 20, 18)
+        self.camera = [0, 0]
+        self.enemies = []
+        self.clock = pygame.time.Clock()
+        self.grid = MapGen.Grid(80, 80, 40, self)
+        self.grid.generate_dungeon()
+        self.player_pos = self.grid.get_starting_point()
+        self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
+        self.setup_grid()
+        self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
+        for y in range(self.grid.height):
+            for x in range(self.grid.width):
+                cell = self.grid.get_cell(x, y)
+                if isinstance(cell, Hostile):
+                    cell.game = self  # Set the game reference for the enemy
+                    self.enemies.append(cell)
+        self.enemy = Hostile(self, (5 * self.grid.cell_size, 5 * self.grid.cell_size),
+                             "Assets/Sprites/Entities/Creatures/Walker/walker.png")
+        self.turn_count = 0
+        self.is_player_turn = True
+        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
+        self.vision_radius = 10  # Adjust this value to change the player's vision range
+        self.popup = None  # Initialize popup as None
+        self.hit_highlight = None  # Initialize hit highlight as None
+        self.map_loop()
+    def get_player_charater(self):
+        return self.player
+    def setup_grid(self):
+        self.grid.set_cell(7, 7, Loot(self, (7, 7), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+        self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
+                           Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2),
+                                "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
+
+    def highlight_tile(self, x, y, color, duration):
+        self.highlight = (x, y, color, pygame.time.get_ticks() + duration)
+    def map_loop(self):
+        backdrop = Rectangle(((self.surface.get_width() - 200), 0), (200, self.surface.get_height()), (70, 70, 70))
+        turn_text = TextRenderer(self.font_small, (255, 255, 255))
+        ammo_text = TextRenderer(self.font_small, (255, 255, 255))
+        weapon_name = TextRenderer(self.font_small, (255, 255, 255))
+        reload_button = Button("Reload", (self.surface.get_width() - 175, 350), (75, 50), self.font_small)
+        weapon_mode = Button("Weapon Mode", (self.surface.get_width() - 85, 350), (75, 50), self.font_small)
+        inventory_btn = Button("Inventory", (self.surface.get_width() - 175, 650), (150, 50), self.font_small)
+        running = True
+        inventory_open = False
+        self.player.inventory.add_item(Items.Shard())
+        self.popup = None
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                if self.is_player_turn:  # Only handle input if it's the player's turn
+                    move = self.player.handle_input(event)
+                    if move != (0, 0):
+                        self.move_player(move)
+                        self.is_player_turn = False
+                        self.turn_count += 1
+                        self.handle_enemy_turn()
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        mouse_pos = pygame.mouse.get_pos()
+                        if inventory_open:
+                            self.player.handle_inventory_click(mouse_pos)
+                            if self.popup:
+                                action = self.popup.handle_click(mouse_pos)
+                                if action == "use":
+                                    if isinstance(self.popup.item, Items.Weapon):
+                                        self.player.equip_weapon(self.popup.item)
+                                    else:
+                                        self.player.inventory.use_item(self.popup.item)
+                                elif action == "discard":
+                                    self.player.inventory.remove_item(self.popup.item)
+                                self.popup = None
+                        tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
+                        tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
+                        cell_values = self.grid.get_cell(tile_x, tile_y)
+                        for actor in cell_values:
+                            if isinstance(actor, Actor):
+                                actor_event = actor.is_clicked(mouse_pos)
+                                if actor_event == "attack":
+                                    hit_pos = self.player.attack(actor)
+                                    if hit_pos:
+                                        self.highlight_tile(hit_pos[0], hit_pos[1], (255, 0, 0),
+                                                            200)
+                                elif actor_event == "search":
+                                    self.player.search()
+                                elif actor_event == "use":
+                                    self.player.use(actor)
+                        if reload_button.is_clicked(mouse_pos):
+                            if isinstance(self.player.weapon, Items.RangedWeapon):
+                                self.player.weapon.reload()
+                        elif weapon_mode.is_clicked(mouse_pos):
+                            print("Weapon Mode")
+                        elif inventory_btn.is_clicked(mouse_pos):
+                            inventory_open = not inventory_open
+                            if inventory_open:
+                                inventory_btn.text = "Close"
+                            else:
+                                inventory_btn.text = "Inventory"
+
+            self.surface.fill(self.bgc)
+            self.update_camera()
+            self.update_visibility()  # Update visibility
+            clock = pygame.time.Clock()
+            fps = str(clock.tick(60))
+            pygame.display.set_caption("Templars of Elysium - Map" + fps)
+            self.grid.draw(self.surface, self.camera, self.visibility_grid)
+
+            backdrop.draw(self.surface)
+            mouse_pos = pygame.mouse.get_pos()
+
+            tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
+            tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
+
+            cell_values = self.grid.get_cell(tile_x, tile_y)
+
+            for actor in cell_values:
+                        if isinstance(actor, Actor) and self.visibility_grid[tile_y][tile_x]:
+                            info_text = actor.getinfo()
+                            text_surface = self.font_ann.render(info_text, True, (255, 255, 255))
+                            text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 10))
+                            self.surface.blit(text_surface, text_rect)
+                            pygame.draw.line(self.surface, (255, 255, 255),
+                                             (self.player_pos[0] * self.grid.cell_size - self.camera[
+                                                 0] + self.grid.cell_size // 2,
+                                              self.player_pos[1] * self.grid.cell_size - self.camera[
+                                                  1] + self.grid.cell_size // 2),
+                                             mouse_pos)
+                            if isinstance(actor, Hostile) and isinstance(self.player.weapon, Items.Weapon):
+                                distance_x = abs(self.player_pos[0] - tile_x)
+                                distance_y = abs(self.player_pos[1] - tile_y)
+                                c_info = max(distance_x, distance_y)
+                                c_text = f"Distance: {c_info} cells"
+                                c_data = "weapon range " + str(self.player.weapon.range) if isinstance(
+                                    self.player.weapon, Items.RangedWeapon) else ""
+                                hit_chance = self.player.calculate_hit_chance(actor)
+                                hit_text = f"Hit Chance: {hit_chance}%"
+                                c_surface = self.font_small.render(c_data, True, (255, 255, 255))
+                                text_surface = self.font_small.render(c_text, True, (
+                                100, 100, 100) if c_info > self.player.weapon.range else (255, 0, 0))
+                                hit_surface = self.font_small.render(hit_text, True, (255, 255, 255))
+                                text_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 30))
+                                range_rect = text_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 50))
+                                hit_rect = hit_surface.get_rect(topleft=(mouse_pos[0] + 10, mouse_pos[1] + 70))
+                                self.surface.blit(text_surface, text_rect)
+                                self.surface.blit(c_surface, range_rect)
+                                self.surface.blit(hit_surface, hit_rect)
+            else:
+                pass
+#                pygame.mouse.set_cursor(pygame.cursors.arrow)
+
+            turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
+            turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
+            if isinstance(self.player.weapon, Items.Weapon):
+                weapon_icon = pygame.image.load(self.player.weapon.icon)
+                weapon_name.draw_text(self.surface, self.player.weapon.name, (self.surface.get_width() - 150, 250), 50)
+                if isinstance(self.player.weapon, Items.RangedWeapon):
+                    ammo_text.draw_text(self.surface, str(self.player.weapon.ammo),
+                                        (self.surface.get_width() - 150, 300), 50)
+                    reload_button.draw(self.surface)
+
+            else:
+                weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
+                weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width() - 190, 275), 200)
+            weapon_mode.draw(self.surface)
+
+            self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 200))
+            if inventory_open:
+                self.player.render_inventory(self.surface)
+            inventory_btn.draw(self.surface)
+            if self.popup:
+                self.popup.draw()
+            if self.hit_highlight:
+                hit_x, hit_y = self.hit_highlight
+                pygame.draw.rect(self.surface, (255, 0, 0),
+                                 (hit_x * self.grid.cell_size - self.camera[0],
+                                  hit_y * self.grid.cell_size - self.camera[1],
+                                  self.grid.cell_size, self.grid.cell_size), 2)
+
+            if self.highlight:
+                x, y, color, end_time = self.highlight
+                if pygame.time.get_ticks() < end_time:
+                    pygame.draw.rect(self.surface, color,
+                                     (x * self.grid.cell_size - self.camera[0],
+                                      y * self.grid.cell_size - self.camera[1],
+                                      self.grid.cell_size, self.grid.cell_size))
+                else:
+                    self.highlight = None
+            pygame.display.flip()
+
+            self.clock.tick(60)
+
+        pygame.quit()
+
+
+    def pass_turn(self):
+        print("Turn passed")
+        self.is_player_turn = not self.is_player_turn
+        self.handle_enemy_turn()
+
+    def handle_enemy_turn(self):
+        print("Enemy's turn")
+        for enemy in self.enemies:
+            if enemy.alive:
+                enemy.take_turn(self.player_pos)
+        self.is_player_turn = True
+
+
+    def update_camera(self):
+        self.camera[0] = self.player_pos[0] * self.grid.cell_size - self.surface.get_width() // 2 + self.grid.cell_size // 2
+        self.camera[1] = self.player_pos[1] * self.grid.cell_size - self.surface.get_height() // 2 + self.grid.cell_size // 2
+
+    def move_player(self, move):
+        new_x = self.player_pos[0] + move[0]
+        new_y = self.player_pos[1] + move[1]
+        cell_values = self.grid.get_cell(new_x, new_y)
+        can_move = True
+        for item in cell_values:
+            if isinstance(item, Entities.Actor) and item.collision:
+                can_move = False
+                break
+        if can_move:
+            #self.grid.set_cell(self.player_pos[0], self.player_pos[1], None) deprecated method
+            self.grid.remove_from_cell(self.player_pos[0], self.player_pos[1],self.player)
+            self.player_pos = [new_x, new_y]
+            self.grid.set_cell(new_x, new_y, self.player)
+            self.player.rect.topleft = (new_x * self.grid.cell_size, new_y * self.grid.cell_size)
+            self.player.pos = [new_x, new_y]
+            print(self.player.pos, self.grid.get_cell(self.player_pos[0], self.player_pos[1]))
+
+    def update_visibility(self):
+        self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
+        self.cast_rays()
+
+    def cast_rays(self):
+        player_x, player_y = self.player_pos
+        for angle in range(0, 360, 1):  # raycast by 1 degrees \ head direction mb?
+            self.cast_ray(player_x, player_y, math.radians(angle))
+
+    def cast_ray(self, start_x, start_y, angle):
+        dx = math.cos(angle)
+        dy = math.sin(angle)
+
+        for i in range(self.vision_radius):
+            x = int(start_x + dx * i)
+            y = int(start_y + dy * i)
+
+            if not self.is_valid(x, y):
+                break
+
+            self.visibility_grid[y][x] = True
+
+            if self.is_wall(x, y):
+                break
+
+    def is_valid(self, x, y):
+        return 0 <= x < self.grid.width and 0 <= y < self.grid.height
+
+    def is_wall(self, x, y):
+        cell_values = self.grid.get_cell(x, y)
+        return any(isinstance(item, Entities.Wall) for item in cell_values) or (any(isinstance(item, Entities.Door)  and  item.collision == True for item in cell_values ))
+
+    def update_hostile_positions(self):
+        self.hostile_positions = {tuple(enemy.pos): enemy for enemy in self.enemies if enemy.alive}
+def flood_fill(grid, start_pos, visibility_grid): #deprecated
+        def is_valid(x, y):
+            return 0 <= x < grid.width and 0 <= y < grid.height
+
+        def is_wall(x, y):
+            cell_values = grid.get_cell(x, y)
+            return any(isinstance(item, Entities.Wall) for item in cell_values)
+
+        stack = [start_pos]
+        while stack:
+            x, y = stack.pop()
+            if is_valid(x, y) and not visibility_grid[y][x]:
+                visibility_grid[y][x] = True
+                if not is_wall(x, y):
+                    stack.append((x + 1, y))
+                    stack.append((x - 1, y))
+                    stack.append((x, y + 1))
+                    stack.append((x, y - 1))
+
+if __name__ == "__main__":
+    Game()
+
+==== Shaders.py ====
+
+#import math
+import numpy
+
+# def draw_radial_gradient(screen, color1, color2):
+#     for y in range(screen.get_height()):
+#         for x in range(screen.get_width()):
+#             dx = x - screen.get_width() // 2
+#             dy = y - screen.get_height() // 2
+#             distance = math.sqrt(dx*dx + dy*dy)
+#             max_distance = math.sqrt((screen.get_width()//2)**2+(screen.get_height()//2)**2)
+#             ratio = distance / max_distance
+#             ratio = min(ratio, 1)
+#             r = int(color1[0] * (1 - ratio) + color2[0] * ratio)
+#             g = int(color1[1] * (1 - ratio) + color2[1] * ratio)
+#             b = int(color1[2] * (1 - ratio) + color2[2] * ratio)
+#             screen.set_at((x, y), (r, g, b))
+def generate_gradient(from_color, to_color, height, width):
+    channels = []
+    for channel in range(3):
+        from_value, to_value = from_color[channel], to_color[channel]
+        channels.append(
+            numpy.tile(
+                numpy.linspace(from_value, to_value, width), [height, 1],
+            ),
+        )
+    return numpy.dstack(channels)
+
+
+def generate_radial_gradient(center, radius, from_color, to_color, height, width):
+    # Create an array to hold the gradient
+    gradient = numpy.zeros((height, width, 3), dtype=numpy.uint8)
+
+    # Calculate the distance from the center for each pixel
+    for y in range(height):
+        for x in range(width):
+            # Calculate the distance from the center
+            distance = numpy.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
+            # Normalize the distance to a value between 0 and 1
+            normalized_distance = min(distance / radius, 1.0)
+
+            # Interpolate the color based on the normalized distance
+            for channel in range(3):
+                # Ensure from_color and to_color are tuples or lists
+                gradient[y, x, channel] = int(
+                    from_color[channel] + (to_color[channel] - from_color[channel]) * normalized_distance)
+    return gradient
+
+==== UIElements.py ====
+
+import pygame
+
+
+
+class Button:
+    def __init__(self, text, position, size, font, color=(100, 100, 100), text_color=(255, 255, 255), enabled=True):
+        self.text = text
+        self.position = position
+        self.size = size
+        self.font = font
+        self.color = color
+        self.text_color = text_color
+        self.rect = pygame.Rect(position, size)
+        self.enabled = enabled
+        self.text_renderer = TextRenderer(font, text_color)
+
+    def draw(self, surface):
+        if not self.enabled:
+            disabled_color = (150, 150, 150)  # Example disabled color
+            pygame.draw.rect(surface, disabled_color, self.rect)
+        else:
+            pygame.draw.rect(surface, self.color, self.rect)
+
+        text_surfaces = self.text_renderer.render_text(self.text, self.rect.width)
+        y_offset = (self.rect.height - sum(text_surface.get_height() for text_surface in text_surfaces)) // 2
+
+        for text_surface in text_surfaces:
+            text_rect = text_surface.get_rect()
+            text_rect.centerx = self.rect.centerx
+            text_rect.y = self.rect.y + y_offset
+            surface.blit(text_surface, text_rect)
+            y_offset += text_surface.get_height()
+
+    def is_clicked(self, mouse_pos):
+        if self.enabled:
+            return self.rect.collidepoint(mouse_pos)
+        return False
+
+    def set_enabled(self, enabled):
+        self.enabled = enabled
+
+    def update_text(self, new_text):
+        self.text = new_text
+
+
+class TextRenderer:
+    def __init__(self, font, color=(255, 255, 255)):
+        if not isinstance(font, pygame.font.Font):
+            raise ValueError("font must be a pygame.font.Font object")
+        self.font = font
+        self.color = color
+
+    def render_text(self, text, max_width):
+        words = text.split(' ')
+        lines = []
+        current_line = []
+
+        for word in words:
+            current_line.append(word)
+            line_surface = self.font.render(' '.join(current_line), True, self.color)
+            if line_surface.get_width() > max_width:
+                current_line.pop()
+                lines.append(' '.join(current_line))
+                current_line = [word]
+
+        lines.append(' '.join(current_line))
+
+        text_surfaces = [self.font.render(line, True, self.color) for line in lines]
+        return text_surfaces
+
+    def draw_text(self, surface, text, position, max_width):
+        text_surfaces = self.render_text(text, max_width)
+        x, y = position
+
+        for line_surface in text_surfaces:
+            surface.blit(line_surface, (x, y))
+            y += line_surface.get_height()
+class InputBox:
+    def __init__(self, position, size, font):
+        self.position = position
+        self.color = (0,0,0)
+        self.size = size
+        self.rect = pygame.Rect(self.position, self.size)
+        self.text = ''
+        self.active = False
+        self.font = pygame.font.Font("Assets/fonts/Game/HomeVideo-Regular.otf", 32)
+    def handle_event(self, event):
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            if self.rect.collidepoint(event.pos):
+                self.active = not self.active
+            else:
+                self.active = False
+            self.color = (0,0,0) if self.active else (125,125,125)
+        if event.type == pygame.KEYDOWN and self.active:
+            if event.key == pygame.K_RETURN:
+                print(self.text)
+                self.text = ""
+            elif event.key == pygame.K_BACKSPACE:
+                self.text = self.text[:-1]
+            else:
+                self.text += event.unicode
+    def draw(self,screen):
+        pygame.draw.rect(screen, self.color, self.rect,2)
+        text_surface = self.font.render(self.text, False, (0,0,0))
+        screen.blit(text_surface,(self.rect.x + 5, self.rect.y + 5))
+
+    def get_name(self):
+        return self.text
+class ImageButton:
+    def __init__(self, image_normal, image_hovered, image_focused, position, size):
+        self.image_normal = image_normal
+        self.image_hovered = image_hovered
+        self.image_focused = image_focused
+        self.position = position
+        self.size = size
+        self.rect = pygame.Rect(self.position, self.size)
+        self.is_hovered = False
+        self.is_focused = False
+        self.mask_normal = pygame.mask.from_surface(self.image_normal)
+        self.mask_hovered = pygame.mask.from_surface(self.image_hovered)
+        self.mask_focused = pygame.mask.from_surface(self.image_focused)
+
+    def draw(self, surface):
+        if self.is_hovered:
+            surface.blit(self.image_hovered, self.rect)
+        else:
+            if self.is_focused:
+                surface.blit(self.image_focused, self.rect)
+            else:  # Default to normal image
+                surface.blit(self.image_normal, self.rect)
+
+    def is_clicked(self, pos):
+        if not self.rect.collidepoint(pos):
+            return False
+
+        relative_x = pos[0] - self.rect.x
+        relative_y = pos[1] - self.rect.y
+
+        if self.is_hovered:
+            return self.mask_hovered.get_at((relative_x, relative_y))
+        elif self.is_focused:
+            return self.mask_focused.get_at((relative_x, relative_y))
+        else:
+            return self.mask_normal.get_at((relative_x, relative_y))
+
+    def update(self, mouse_pos):
+        if not self.rect.collidepoint(mouse_pos):
+            self.is_hovered = False
+            return
+
+        relative_x = mouse_pos[0] - self.rect.x
+        relative_y = mouse_pos[1] - self.rect.y
+
+        # Use the appropriate mask to determine hover state
+        if self.mask_normal.get_at((relative_x, relative_y)):
+            self.is_hovered = True
+        else:
+            self.is_hovered = False
+
+    def in_focus(self, state=False):
+        self.is_focused = state
+class Rectangle:
+    def __init__(self, position, size, color):
+        self.position = position
+        self.size = size
+        self.color = color
+        self.rect = pygame.Rect(self.position, self.size)
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.color, self.rect)
+
+    def is_mouse_over(self, mouse_pos):
+        return self.rect.collidepoint(mouse_pos)
+
+==== Utils.py ====
+
+import Entities
+import heapq
+import MapGen
+
+def get_distance_from_actors(actor1, actor2):
+    if isinstance(actor1, Entities.Actor) and isinstance(actor2, Entities.Actor):
+        distance_x = abs(actor1.pos[0] - actor2.pos[0])
+        distance_y = abs(actor1.pos[1] - actor2.pos[1])
+        actor_distance = max(distance_x, distance_y)
+        return actor_distance
+
+
+def a_star_search(grid, start, goal, game):
+    def heuristic(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def get_neighbors(node):
+        neighbors = []
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            x, y = node[0] + dx, node[1] + dy
+            if 0 <= x < grid.width and 0 <= y < grid.height:
+                cell = grid.get_cell(x, y)
+                if not grid.cell_contains(x,y,Entities.Actor): #and not grid.cell_contains(x,y,Entities.Wall):
+                    neighbors.append((x, y))
+        return neighbors
+
+    open_set = []
+    heapq.heappush(open_set, (0, start))
+    came_from = {}
+    g_score = {start: 0}
+    f_score = {start: heuristic(start, goal)}
+
+    while open_set:
+        current = heapq.heappop(open_set)[1]
+
+        if current == goal:
+            path = []
+            while current in came_from:
+                path.append(current)
+                current = came_from[current]
+            path.reverse()
+            return path
+
+        for neighbor in get_neighbors(current):
+            tentative_g_score = g_score[current] + 1
+            if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                came_from[neighbor] = current
+                g_score[neighbor] = tentative_g_score
+                f_score[neighbor] = tentative_g_score + heuristic(neighbor, goal)
+                heapq.heappush(open_set, (f_score[neighbor], neighbor))
+
+    return None
+
