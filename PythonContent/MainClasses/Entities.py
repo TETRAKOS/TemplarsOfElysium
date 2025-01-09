@@ -282,7 +282,7 @@ class Loot(Actor):
     def __init__(self, game, pos, icon):
         super().__init__(pos, icon)
         self.game = game
-        self.items = [Items.Shard(), Items.smg(game.get_player_charater()), Items.surv_pistol(game.get_player_charater())]  # loot
+        self.items = []  #
         self.name = "Bag with goods"
         self.enabled = True
 

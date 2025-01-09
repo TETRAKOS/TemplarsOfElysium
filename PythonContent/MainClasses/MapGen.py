@@ -4,6 +4,7 @@ import Entities
 import json
 import os
 from Mission_manager import Mission
+import Items  # Ensure you import the Items module
 
 def sorting_key(value):
     if isinstance(value, Entities.Player):
@@ -31,6 +32,7 @@ class Grid:
         self.mission = Mission(self.game, self, "scout")
         self.asset_paths = self.load_asset_paths()
         self.load_images()
+        self.item_table = self.load_item_table()
 
     def load_asset_paths(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -53,6 +55,12 @@ class Grid:
     def load_images(self):
         for key, path in self.asset_paths.items():
             self.images[key] = pygame.image.load(path)
+
+    def load_item_table(self):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        item_table_file = os.path.join(script_dir, 'Assets', 'dicts', 'item_table.js')
+        with open(item_table_file, 'r') as f:
+            return json.load(f)
 
     def generate_dungeon(self):
         self.rooms = []
@@ -129,6 +137,8 @@ class Grid:
             print(f"{layout}: {count}")
 
         # Generate loot
+        self.generate_loot()
+
     def generate_loot(self):
         for room in self.rooms:
             if room[5] > 0:  # Check if the room has a non-zero loot value
@@ -137,8 +147,18 @@ class Grid:
                 for _ in range(num_loots):
                     loot_pos_x = random.randint(x + 1, x + room[2] - 2)  # Avoid placing on walls
                     loot_pos_y = random.randint(y + 1, y + room[3] - 2)  # Avoid placing on walls
-                    self.set_cell(loot_pos_x, loot_pos_y, Entities.Loot(self.game, [loot_pos_x, loot_pos_y],
-                                                                        "Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png"))
+                    loot_box = Entities.Loot(self.game, [loot_pos_x, loot_pos_y],
+                                             "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag_o.png")
+                    self.set_cell(loot_pos_x, loot_pos_y, loot_box)
+
+                    # Add items to the loot box
+                    num_items = random.randint(1, 3)  # Adjust the range as needed
+                    for _ in range(num_items):
+                        item_id = random.choice(list(self.item_table.keys()))
+                        item_class = getattr(Items, self.item_table[item_id])
+                        if not issubclass(item_class, Items.Weapon):
+                            item_instance = item_class()  # Other items do not need a player reference
+                            loot_box.items.append(item_instance)
 
     def get_starting_point(self):
         room = self.rooms[0]
