@@ -32,12 +32,39 @@ for tech in tech_tree.values():
     tech.set_tech_tree(tech_tree)
 
 class TechTreeUI:
-    def __init__(self, surface, font, tech_tree):
+    def __init__(self, surface, font, tech_tree, db_connection, db_cursor):
         self.surface = surface
         self.font = font
         self.tech_tree = tech_tree
         self.buttons = {}
+        self.db_connection = db_connection
+        self.db_cursor = db_cursor
         self.create_buttons()
+        self.load_researched_technologies()
+
+
+    def load_researched_technologies(self):
+        try:
+            self.db_cursor.execute("SELECT tech FROM profile_data")
+            result = self.db_cursor.fetchone()
+            if result and result[0]:
+                researched_techs = result[0].split(',')
+                for tech_name in researched_techs:
+                    if tech_name in self.tech_tree:
+                        self.tech_tree[tech_name].researched = True
+                self.update_buttons()
+        except sqlite3.Error as e:
+            print(f"Error loading researched technologies: {e}")
+
+    def save_researched_technologies(self):
+        researched_techs = ','.join([tech.name for tech in self.tech_tree.values() if tech.researched])
+        try:
+            self.db_cursor.execute("UPDATE profile_data SET tech = ?", (researched_techs,))
+            self.db_connection.commit()
+            print("Researched technologies saved successfully.")
+        except sqlite3.Error as e:
+            print(f"Error saving researched technologies: {e}")
+
 
     def create_buttons(self):
         button_width = 175
@@ -67,19 +94,17 @@ class TechTreeUI:
         for tech_name, button in self.buttons.items():
             if button.is_clicked(event.pos):
                 tech = self.tech_tree[tech_name]
-                if tech.can_research():
+                if tech.can_research() and not tech.researched:
                     tech.researched = True
                     self.update_buttons()
                     print(f"Researched {tech.name}")
+                    self.save_researched_technologies()
 
     def update_buttons(self):
         for tech_name, button in self.buttons.items():
             tech = self.tech_tree[tech_name]
             button.set_enabled(tech.can_research() and not tech.researched)
-        for tech_name, button in self.buttons.items():
-            tech = self.tech_tree[tech_name]
             if tech.researched:
-                print(f"Researched {tech.name}")
                 button.selected = True
 
 class Shell:
@@ -99,6 +124,7 @@ class Shell:
         self.db_cursor = None
         self.profile_data = None
         self.initialize_database()
+        self.tech_tree_ui = None
 
     def initialize_database(self):
         try:
@@ -270,7 +296,7 @@ class Shell:
 
     def tech_menu(self):
         tech_font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 20)
-        tech_tree_ui = TechTreeUI(self.surface, tech_font, tech_tree)
+        self.tech_tree_ui = TechTreeUI(self.surface, tech_font, tech_tree, self.db_connection, self.db_cursor)
         t_running = True
         raid_btn, tech_btn, info_btn, misc_btn = self.low_buttons_array("Tech")
         while t_running:
@@ -278,7 +304,7 @@ class Shell:
                 if event.type == pygame.QUIT:
                     t_running = False
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    tech_tree_ui.handle_event(event)
+                    self.tech_tree_ui.handle_event(event)
                     if event.button == 3:
                         self.mission_screen()
                         t_running = False
@@ -294,7 +320,7 @@ class Shell:
                         print("Misc Button Clicked")
 
             self.surface.fill(self.bgc)
-            tech_tree_ui.draw()
+            self.tech_tree_ui.draw()
             raid_btn.draw(self.surface)
             tech_btn.draw(self.surface)
             info_btn.draw(self.surface)
