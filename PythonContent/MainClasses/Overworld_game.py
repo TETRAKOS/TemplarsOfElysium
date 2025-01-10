@@ -33,16 +33,16 @@ class Game:
             for x in range(self.grid.width):
                 cell = self.grid.get_cell(x, y)
                 if isinstance(cell, Hostile):
-                    cell.game = self  # Set the game reference for the enemy
+                    cell.game = self
                     self.enemies.append(cell)
         self.enemy = Hostile(self, (5 * self.grid.cell_size, 5 * self.grid.cell_size),
                              "Assets/Sprites/Entities/Creatures/Walker/walker.png")
         self.turn_count = 0
         self.is_player_turn = True
         self.visibility_grid = [[False for _ in range(self.grid.width)] for _ in range(self.grid.height)]
-        self.vision_radius = 10  # Adjust this value to change the player's vision range
-        self.popup = None  # Initialize popup as None
-        self.hit_highlight = None  # Initialize hit highlight as None
+        self.vision_radius = 10
+        self.popup = None
+        self.hit_highlight = None
         self.load_gear()
 
 
@@ -127,7 +127,7 @@ class Game:
 
             self.surface.blit(self.bgc,(0,0))
             self.update_camera()
-            self.update_visibility()  # Update visibility
+            self.update_visibility()
             clock = pygame.time.Clock()
             fps = str(clock.tick(60))
             pygame.display.set_caption("Raiders of Elysium - Map")

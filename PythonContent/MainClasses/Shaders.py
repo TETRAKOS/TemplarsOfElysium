@@ -27,20 +27,19 @@ def generate_gradient(from_color, to_color, height, width):
 
 
 def generate_radial_gradient(center, radius, from_color, to_color, height, width):
-    # Create an array to hold the gradient
     gradient = numpy.zeros((height, width, 3), dtype=numpy.uint8)
 
     # Calculate the distance from the center for each pixel
     for y in range(height):
         for x in range(width):
-            # Calculate the distance from the center
+
             distance = numpy.sqrt((x - center[0]) ** 2 + (y - center[1]) ** 2)
-            # Normalize the distance to a value between 0 and 1
+
             normalized_distance = min(distance / radius, 1.0)
 
-            # Interpolate the color based on the normalized distance
+
             for channel in range(3):
-                # Ensure from_color and to_color are tuples or lists
+
                 gradient[y, x, channel] = int(
                     from_color[channel] + (to_color[channel] - from_color[channel]) * normalized_distance)
     return gradient

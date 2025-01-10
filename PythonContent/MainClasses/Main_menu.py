@@ -80,9 +80,12 @@ class Menu:
                     self.screen.search_new_state("quit")
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if create_button.is_clicked(event.pos):
-                        self.new_gameSQL(name_ib.get_name())
+                        profile_name = name_ib.get_name()
+                        save_data = self.new_gameSQL(profile_name)
                         self.stop_music()
+                        self.screen.save = save_data  # Set the save data in the MainScreen instance
                         self.screen.search_new_state("shell")
+                        return
                     elif back_btn.is_clicked(event.pos):
                         return self.Run_CampaignMenu()
                 name_ib.handle_event(event)
@@ -97,6 +100,7 @@ class Menu:
     def new_gameSQL(self, profile_name=None):
         connection = sqlite3.connect("GameData/players.db")
         self.cursor = connection.cursor()
+        save_data = None
         if profile_name is not None:
             profile_dir = "GameData/Profiles/" + profile_name + ".db"
             self.cursor.execute('''CREATE TABLE IF NOT EXISTS player(
@@ -110,7 +114,6 @@ class Menu:
                                            VALUES (?, ?, ?)''', (counter, profile_dir, profile_name))
             connection.commit()
 
-            # Create a new profile database
             profile = sqlite3.connect("GameData/Profiles/" + profile_name + ".db")
             pcursor = profile.cursor()
             pcursor.execute('''CREATE TABLE IF NOT EXISTS profile_data(
@@ -125,8 +128,10 @@ class Menu:
             pcursor.close()
             profile.close()
 
+            save_data = (counter, profile_dir)
         self.cursor.close()
         connection.close()
+        return save_data
 
     def Run_CampaignMenu(self):
         new_btn = Button("New Game", ((self.surface.get_width() - 280), 480), (260, 50), self.font, enabled=True)
@@ -185,7 +190,6 @@ class Menu:
         saves = cursor.fetchall()
         conn.close()
 
-        # Create buttons for each save
         load_buttons = []
         delete_buttons = []
         save_names = []

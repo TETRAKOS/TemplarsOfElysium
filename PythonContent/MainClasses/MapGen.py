@@ -72,7 +72,6 @@ class Grid:
         attempts = 0
         max_attempts = (basic + danger + loot) * 3  # Limit attempts to avoid infinite loops
 
-        # Find the elevator layout
         elevator_layout = next(layout for layout in room_layouts if layout["layout"] == "elevator")
 
 
@@ -88,7 +87,6 @@ class Grid:
         self.rooms.append(first_room)
         layout_counts[elevator_layout["layout"]] += 1
 
-        # Generate middle rooms
         while len(self.rooms) < (basic + danger + loot - 1) and attempts < max_attempts:
             layout = random.choice([l for l in room_layouts if l["layout"] != "elevator"])
             if layout_counts[layout["layout"]] >= layout["max_count"]:
@@ -268,11 +266,9 @@ class Grid:
         x1, y1, w1, h1 = room1[:4]
         x2, y2, w2, h2 = room2[:4]
 
-        # centers of the rooms
         center1 = (x1 + w1 // 2, y1 + h1 // 2)
         center2 = (x2 + w2 // 2, y2 + h2 // 2)
 
-        # closest points on the edges of the rooms
         if center1[0] < center2[0]:  # room1 is to the left of room2
             edge1_x = x1 + w1
             edge2_x = x2
@@ -287,21 +283,17 @@ class Grid:
             edge1_y = y1
             edge2_y = y2 + h2
 
-        #  closest points on edges
         if abs(edge1_x - edge2_x) > abs(edge1_y - edge2_y):
-            # Horizontal corridor is longer, so connect vertically first
             edge1 = (edge1_x, random.randint(y1, y1 + h1 - 1))
             edge2 = (edge2_x, random.randint(y2, y2 + h2 - 1))
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge1[1])
             self.draw_vertical_corridor(edge1[1], edge2[1], edge2[0])
         else:
-            # Vertical corridor
             edge1 = (random.randint(x1, x1 + w1 - 1), edge1_y)
             edge2 = (random.randint(x2, x2 + w2 - 1), edge2_y)
             self.draw_vertical_corridor(edge1[1], edge2[1], edge1[0])
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge2[1])
 
-        # Place a door
         door = Entities.Door((edge1[0], edge1[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
         door2 = Entities.Door((edge2[0], edge2[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
         self.set_cell(edge1[0], edge1[1], door)
@@ -374,15 +366,12 @@ class Grid:
                         if isinstance(value, Entities.Actor):
                             actor_sprites.append((value.icon, rect))
 
-        # Render floor sprites
         for image, rect in floor_sprites:
             surface.blit(image, rect)
 
-        # Render decor sprites
         for image, rect in decor_sprites:
             surface.blit(image, rect)
 
-        # Render actor sprites
         for image, rect in actor_sprites:
             surface.blit(image, rect)
 
@@ -405,11 +394,10 @@ class Grid:
             self.get_cell(x, y + 1)  # Bottom
         ]
 
-        # Check if neighbors are walls
-        left_wall = any(isinstance(item, Entities.Wall) for item in neighbors[0])
-        right_wall = any(isinstance(item, Entities.Wall) for item in neighbors[1])
-        top_wall = any(isinstance(item, Entities.Wall) for item in neighbors[2])
-        bottom_wall = any(isinstance(item, Entities.Wall) for item in neighbors[3])
+        # left_wall = any(isinstance(item, Entities.Wall) for item in neighbors[0])
+        # right_wall = any(isinstance(item, Entities.Wall) for item in neighbors[1])
+        # top_wall = any(isinstance(item, Entities.Wall) for item in neighbors[2])
+        # bottom_wall = any(isinstance(item, Entities.Wall) for item in neighbors[3])
 
         return Entities.Wall(pos, "Assets/Sprites/Entities/MapAssets/Wall/Wall_cnc.png")  # Default wall
 

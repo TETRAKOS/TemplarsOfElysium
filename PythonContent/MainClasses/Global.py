@@ -261,10 +261,10 @@ class Shell:
                     #     print("Save Button Clicked")
                     # elif load_btn.is_clicked(event.pos):
                     #     print("Load Button Clicked")
-                    # elif prep_raid_btn.is_clicked(event.pos):
+                    elif prep_raid_btn.is_clicked(event.pos):
                         print("Preparation for Raid Button Clicked")
                         self.screen.search_new_state("game")
-                        return
+                        menu_running = False
                     # elif options_btn.is_clicked(event.pos):
                     #     print("Options Button Clicked")
                     # elif quit_btn.is_clicked(event.pos):
@@ -295,7 +295,7 @@ class Shell:
                 raid_description.draw_text(self.surface, raid_subt, (20, 60), 380)
                 pygame.display.flip()
 
-        return "shell"  # Return to the shell state if the loop exits
+        return "shell"
 
     def high_buttons_array(self):
         save_btn = Button("Save", (620, 0), (100, 25), self.font_small, self.b_bgc)
