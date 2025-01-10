@@ -53,5 +53,5 @@ class MainScreen:
         else:
             pygame.quit()
 if __name__ == "__main__":
-    miner = MainScreen()
-    miner.search_new_state("menu")
+    miner_virus = MainScreen()
+    miner_virus.search_new_state("menu")
