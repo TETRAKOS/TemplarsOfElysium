@@ -1,21 +1,22 @@
+import sqlite3
 import pygame
 import Entities
 from Entities import Player, Hostile, Actor, Loot
 from UIElements import Rectangle, TextRenderer, Button
-#import Shaders
 import Items
 import MapGen
 import math
+import json
 
 class Game:
-    def __init__(self, surface):
+    def __init__(self, surface, screen):
         self.font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 32)
         self.font_small = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 16)
         self.font_ann = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 12)
         self.gameIcon = pygame.image.load("Assets/Sprites/icons/Icon33.png")
         pygame.display.set_icon(self.gameIcon)
         self.highlight = None  # (x, y, (color), end_time)
-        #self.bgc = (20, 25, 27)
+        self.screen = screen
         self.bgc = pygame.image.load("Assets/Sprites/Backdrops/NormalBackground.png")
         self.bgcd = (15, 20, 18)
         self.camera = [0, 0]
@@ -26,7 +27,6 @@ class Game:
         self.grid.generate_dungeon()
         self.player_pos = self.grid.get_starting_point()
         self.player = Player(self, self.player_pos, "Assets/Sprites/Entities/Creatures/Player/fig1.png")
-        self.setup_grid()
         self.grid.generate_loot()
         self.grid.set_cell(self.player_pos[0], self.player_pos[1], self.player)
         for y in range(self.grid.height):
@@ -43,15 +43,11 @@ class Game:
         self.vision_radius = 10  # Adjust this value to change the player's vision range
         self.popup = None  # Initialize popup as None
         self.hit_highlight = None  # Initialize hit highlight as None
+        self.load_gear()
+
 
     def get_player_charater(self):
         return self.player
-
-    def setup_grid(self):
-        self.grid.set_cell(7, 7, Loot(self, (7, 7), "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
-        self.grid.set_cell(self.player_pos[0] + 2, self.player_pos[1] + 2,
-                           Loot(self, (self.player_pos[0] + 2, self.player_pos[1] + 2),
-                                "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png"))
 
     def highlight_tile(self, x, y, color, duration):
         self.highlight = (x, y, color, pygame.time.get_ticks() + duration)
@@ -66,8 +62,8 @@ class Game:
         health_text = TextRenderer(self.font_small, (255,255,255))
         health_icon = pygame.image.load("Assets/Sprites/icons/Health.png")
         health_icon = pygame.transform.scale(health_icon, (32, 32))
+        extract_btn = Button("Evacuation", (self.surface.get_width() - 160, 75), (125, 50), self.font_small, (255,255,0),(0,0,0),enabled =False)
         reload_button = Button("Reload", (self.surface.get_width() - 175, 350), (75, 50), self.font_small)
-        weapon_mode = Button("Weapon Mode", (self.surface.get_width() - 85, 350), (75, 50), self.font_small)
         inventory_btn = Button("Inventory", (self.surface.get_width() - 175, 650), (150, 50), self.font_small)
         minimap = self.grid.generate_minimap()
         minimap_size = 190  # size minimap
@@ -75,13 +71,12 @@ class Game:
         minimap_pos = (self.surface.get_width() - minimap_size - 5, 450)
         running = True
         inventory_open = False
-        self.player.inventory.add_item(Items.Shard())
         self.popup = None
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    return "shell"  # Return to the shell state
-                if self.is_player_turn:  # Only handle input if it's the player's turn
+                    pass
+                if self.is_player_turn:
                     move = self.player.handle_input(event)
                     if move != (0, 0):
                         self.move_player(move)
@@ -102,6 +97,9 @@ class Game:
                                 elif action == "discard":
                                     self.player.inventory.remove_item(self.popup.item)
                                 self.popup = None
+                        if extract_btn.is_clicked(mouse_pos):
+                            self.save_gear()
+                            self.screen.search_new_state("shell")
                         tile_x = (mouse_pos[0] + self.camera[0]) // self.grid.cell_size
                         tile_y = (mouse_pos[1] + self.camera[1]) // self.grid.cell_size
                         cell_values = self.grid.get_cell(tile_x, tile_y)
@@ -120,8 +118,6 @@ class Game:
                         if reload_button.is_clicked(mouse_pos):
                             if isinstance(self.player.weapon, Items.RangedWeapon):
                                 self.player.weapon.reload()
-                        elif weapon_mode.is_clicked(mouse_pos):
-                            print("Weapon Mode")
                         elif inventory_btn.is_clicked(mouse_pos):
                             inventory_open = not inventory_open
                             if inventory_open:
@@ -130,12 +126,11 @@ class Game:
                                 inventory_btn.text = "Inventory"
 
             self.surface.blit(self.bgc,(0,0))
-       #    self.surface.fill(self.bgc)
             self.update_camera()
             self.update_visibility()  # Update visibility
             clock = pygame.time.Clock()
             fps = str(clock.tick(60))
-            pygame.display.set_caption("Templars of Elysium - Map" + fps)
+            pygame.display.set_caption("Raiders of Elysium - Map")
             self.grid.draw(self.surface, self.camera, self.visibility_grid)
 
             backdrop.draw(self.surface)
@@ -179,7 +174,6 @@ class Game:
                                 self.surface.blit(hit_surface, hit_rect)
             else:
                 pass
-#                pygame.mouse.set_cursor(pygame.cursors.arrow)
 
             turn_message = "Your Turn" if self.is_player_turn else "Enemy's Turn"
             turn_text.draw_text(self.surface, turn_message, ((self.surface.get_width() - 150), 50), 100)
@@ -195,16 +189,18 @@ class Game:
             else:
                 weapon_icon = pygame.image.load("Assets/Sprites/Items/Weapons/Empty.png")
                 weapon_name.draw_text(self.surface, "No weapon", (self.surface.get_width() - 190, 225), 200)
-            weapon_mode.draw(self.surface)
 
             self.surface.blit(weapon_icon, (self.surface.get_width() - 150, 150))
-
+            if self.player_pos == self.grid.extract_point:
+                extract_btn.draw(self.surface)
+                extract_btn.set_enabled(True)
+            else:
+                extract_btn.set_enabled(False)
             #health display
             self.surface.blit(health_icon, (self.surface.get_width() - 180,300))
             health_text.draw_text(self.surface,str(self.player.health.health),(self.surface.get_width() - 160,320),200)
             self.surface.blit(minimap, minimap_pos)
 
-            # Draw player position on minimap
             player_minimap_x = int(self.player_pos[0] * minimap_size / self.grid.width)
             player_minimap_y = int(self.player_pos[1] * minimap_size / self.grid.height)
             pygame.draw.circle(self.surface, (0, 0, 255),
@@ -232,7 +228,6 @@ class Game:
                                       self.grid.cell_size, self.grid.cell_size))
                 else:
                     self.highlight = None
-
 
             pygame.display.flip()
             self.clock.tick(60)
@@ -265,7 +260,6 @@ class Game:
                 can_move = False
                 break
         if can_move:
-            #self.grid.set_cell(self.player_pos[0], self.player_pos[1], None) deprecated method
             self.grid.remove_from_cell(self.player_pos[0], self.player_pos[1],self.player)
             self.player_pos = [new_x, new_y]
             self.grid.set_cell(new_x, new_y, self.player)
@@ -309,16 +303,17 @@ class Game:
         self.hostile_positions = {tuple(enemy.pos): enemy for enemy in self.enemies if enemy.alive}
 
     def show_game_over(self):
+        self.clear_gear()
+        self.advance_day()
+
         game_over_font = pygame.font.Font('Assets/fonts/Game/HomeVideo-Regular.otf', 64)
         game_over_text = TextRenderer(game_over_font, (255, 0, 0))
         expl_text = TextRenderer(self.font, (255, 255, 255))
         dead_image = pygame.image.load("Assets/Sprites/Entities/Creatures/Player/fig_dead.png")
         dead_image = pygame.transform.scale(dead_image, (80, 80))
 
-
         exit_button = Button("Confirm", (self.surface.get_width() // 2 - 50, self.surface.get_height() // 2 + 120),
                              (150, 50), self.font)
-
         running = True
         while running:
             for event in pygame.event.get():
@@ -328,20 +323,61 @@ class Game:
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_pos = pygame.mouse.get_pos()
                     if exit_button.is_clicked(mouse_pos):
-                        pygame.quit()
-                        exit()
+                        self.screen.search_new_state("shell")
 
-            self.surface.blit(self.bgc,(0,0))
+            self.surface.blit(self.bgc, (0, 0))
             exit_button.draw(self.surface)
-            self.surface.blit(dead_image,(512-20,400-20))
-            game_over_text.draw_text(self.surface, "Mission Failure", (25, self.surface.get_height() // 2 -150),1000, align="center")
-            expl_text.draw_text(self.surface, "Your raider has died and all items has been lost",(self.surface.get_width() // 3, self.surface.get_height() // 2 -75 ),400,align="center")
+            self.surface.blit(dead_image, (512 - 20, 400 - 20))
+            game_over_text.draw_text(self.surface, "Mission Failure", (25, self.surface.get_height() // 2 - 150), 1000,
+                                     align="center")
+            expl_text.draw_text(self.surface, "Your raider has died and all items have been lost",
+                                (self.surface.get_width() // 3, self.surface.get_height() // 2 - 75), 400,
+                                align="center")
             pygame.display.flip()
             self.clock.tick(60)
 
         self.map_loop()
+
     def check_health(self):
         if self.player.health.health <= 0:
             self.show_game_over()
         elif self.player.health.health <= 35:
             self.bgc = pygame.image.load("Assets/Sprites/Backdrops/DeathBackground.png")
+        else:
+            self.bgc = pygame.image.load("Assets/Sprites/Backdrops/NormalBackground.png")
+
+    def clear_gear(self):
+        conn = sqlite3.connect(self.screen.save[1])
+        cursor = conn.cursor()
+        cursor.execute("UPDATE profile_data SET gear = '' WHERE day = (SELECT MAX(day) FROM profile_data)")
+        conn.commit()
+        conn.close()
+
+    def save_gear(self):
+        saved_inventory = self.player.inventory.serialize()
+        conn = sqlite3.connect(self.screen.save[1])
+        cursor = conn.cursor()
+        cursor.execute("UPDATE profile_data SET gear = ? WHERE day = (SELECT MAX(day) FROM profile_data)", (json.dumps(saved_inventory),))
+        conn.commit()
+        conn.close()
+        self.advance_day()
+
+
+    def load_gear(self):
+        conn = sqlite3.connect(self.screen.save[1])
+        cursor = conn.cursor()
+        cursor.execute("SELECT gear FROM profile_data WHERE day = (SELECT MAX(day) FROM profile_data)")
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result[0]:
+            items_dump = result[0].split(',')
+            items_dump = [item.strip('"[] ') for item in items_dump]  # Remove any brackets and extra spaces
+            self.player.inventory.items = self.player.inventory.deserialize(items_dump)
+
+    def advance_day(self):
+        conn = sqlite3.connect(self.screen.save[1])
+        cursor = conn.cursor()
+        cursor.execute("UPDATE profile_data SET day = day + 1 WHERE day = (SELECT MAX(day) FROM profile_data)")
+        conn.commit()
+        conn.close()

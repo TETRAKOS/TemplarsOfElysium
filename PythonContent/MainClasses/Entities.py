@@ -1,10 +1,12 @@
+
 import pygame
 import Items
 import UIElements
 import Utils
-
-
+import json
 #from Overworld_game import Grid
+
+
 def get_distance_from_actors(actor1,actor2):
     distance_x = abs(actor1.pos[0] - actor2.pos[0])
     distance_y = abs(actor1.pos[1] - actor2.pos[1])
@@ -79,7 +81,6 @@ class Inventory_component:
     def remove_item(self, item):
         if item in self.items:
             self.items.remove(item)
-            print(f"Removed {item.name} from inventory")
 
     def equip_weapon(self, weapon):
         if isinstance(weapon, Items.Weapon):
@@ -89,6 +90,47 @@ class Inventory_component:
     def use_item(self, item):
         if isinstance(item, Items.Item):
             item.use(self)
+
+    def open_items_table(self):
+        with open('Assets/dicts/item_table.js', 'r') as file:
+            item_table = json.load(file)
+            return item_table
+
+    def deserialize(self, items_dump):
+        item_table = self.open_items_table()
+        items = []
+        for item_id in items_dump:
+            class_name = item_table.get(item_id)
+            if class_name:
+                item_class = getattr(Items, class_name, None)
+                if item_class:
+                    item_instance = item_class(player_ref=self.actor_ref)
+                    items.append(item_instance)
+                elif isinstance(class_name, Items.Weapon):
+                     item_instance = item_class(player_ref=self.actor_ref)
+                     items.append(item_instance)
+                     print("weapon added")
+        return items
+
+    def serialize(self):
+        item_table = self.open_items_table()
+        items_dump = []
+        for item in self.items:
+            for key, value in item_table.items():
+                if value == item.__class__.__name__:
+                    items_dump.append(key)
+                    break
+        return items_dump
+
+    def clean_inventory_data(self, items):
+        cleaned_items = []
+        for item in items:
+            item = item.strip()  # Remove any leading/trailing whitespace
+            if item.startswith('[') and item.endswith(']'):
+                item = item[1:-1]  # Remove brackets
+            cleaned_items.append(item)
+        return cleaned_items
+
 
 class Player(Actor):
     def __init__(self, game, pos, icon):
@@ -160,12 +202,12 @@ class Player(Actor):
         inv_backdrop.draw(game_surface)
         y_offset = 50
         for item in self.inventory.items:
-            if isinstance(item, Items.Weapon):
-                continue  # Skip rendering for weapons
             item_name = item.name
             item_text = UIElements.TextRenderer(self.game.font_small, (255, 255, 255))
             item_text.draw_text(game_surface, item_name, (game_surface.get_width() - 190, y_offset), 190)
-            if item.icon:
+            if isinstance(item, Items.Weapon) and item == self.weapon:
+                item_text.draw_text(game_surface, "(Equipped)", (game_surface.get_width() - 100, y_offset), 190)
+            if not isinstance(item, Items.Weapon) and item.icon:
                 rescaled_icon = pygame.transform.scale(item.icon, (32, 32))
                 game_surface.blit(rescaled_icon, (game_surface.get_width() - 220, y_offset))
             y_offset += 30
@@ -294,3 +336,8 @@ class Loot(Actor):
             self.icon = pygame.image.load("Assets\Sprites\Entities\MapAssets\Loot\Bag\Bag_o.png")
             #self.items = []  # Clear the loot after picking up
         return "use"
+class Elevator(Actor):
+    def __init__(self, game, pos, icon):
+        super().__init__(pos, icon)
+        self.collision = False
+        self.name = "Elevator"

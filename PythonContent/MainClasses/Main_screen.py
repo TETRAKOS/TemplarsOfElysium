@@ -34,7 +34,7 @@ class MainScreen:
                     running = False
         pygame.quit()
     def game_menu(self):
-        game_screen = Game(self.surface)
+        game_screen = Game(self.surface,self)
         game_screen.map_loop()
         running = True
         while running:

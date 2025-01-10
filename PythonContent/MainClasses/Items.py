@@ -181,6 +181,7 @@ class MediPatch(Item):
     def use(self, inventory_ref):
         inventory_ref.actor_ref.health.heal(25)
         inventory_ref.remove_item(self)
+        inventory_ref.actor_ref.game.check_health()
         print(f"Healed with {self.name} by 25 HP!")
         return True
 
@@ -194,5 +195,6 @@ class MedInjector(Item):
     def use(self, inventory_ref):
         inventory_ref.actor_ref.health.heal(50)
         inventory_ref.remove_item(self)
+        inventory_ref.actor_ref.game.check_health()
         print(f"Healed with {self.name} by 50 HP!")
         return True

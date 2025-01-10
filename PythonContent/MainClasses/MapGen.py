@@ -33,6 +33,7 @@ class Grid:
         self.asset_paths = self.load_asset_paths()
         self.load_images()
         self.item_table = self.load_item_table()
+        self.extract_point = None
 
     def load_asset_paths(self):
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -74,7 +75,7 @@ class Grid:
         # Find the elevator layout
         elevator_layout = next(layout for layout in room_layouts if layout["layout"] == "elevator")
 
-        # Generate the first (elevator) room
+
         room_width = elevator_layout["x"]
         room_height = elevator_layout["y"]
         x = random.randint(1, self.width - room_width - 2)
@@ -108,8 +109,8 @@ class Grid:
                 layout_counts[layout["layout"]] += 1
 
             attempts += 1
-
-        # Generate the last (elevator) room
+        room_width = elevator_layout["x"]
+        room_height = elevator_layout["y"]
         x = random.randint(1, self.width - room_width - 2)
         y = random.randint(1, self.height - room_height - 2)
         last_room = (x, y, room_width, room_height, elevator_layout["layout"], elevator_layout["loot_value"],
@@ -122,11 +123,12 @@ class Grid:
                          elevator_layout["danger"], elevator_layout["tile"])
 
         self.add_room(last_room)
+        self.set_cell(x,y,Entities.Elevator(self.game,(x,y),"Assets/Sprites/Entities/MapAssets/Technical/MissionManager/Elevator.png"))
+        self.extract_point = [x,y]
         self.enrich_room(last_room, room_content)
         self.rooms.append(last_room)
         layout_counts[elevator_layout["layout"]] += 1
 
-        # Connect rooms
         for i in range(1, len(self.rooms)):
             self.connect_rooms(self.rooms[i - 1], self.rooms[i])
 
@@ -148,7 +150,7 @@ class Grid:
                     loot_pos_x = random.randint(x + 1, x + room[2] - 2)  # Avoid placing on walls
                     loot_pos_y = random.randint(y + 1, y + room[3] - 2)  # Avoid placing on walls
                     loot_box = Entities.Loot(self.game, [loot_pos_x, loot_pos_y],
-                                             "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag_o.png")
+                                             "Assets/Sprites/Entities/MapAssets/Loot/Bag/Bag.png")
                     self.set_cell(loot_pos_x, loot_pos_y, loot_box)
 
                     # Add items to the loot box
@@ -266,26 +268,26 @@ class Grid:
         x1, y1, w1, h1 = room1[:4]
         x2, y2, w2, h2 = room2[:4]
 
-        # Calculate the centers of the rooms
+        # centers of the rooms
         center1 = (x1 + w1 // 2, y1 + h1 // 2)
         center2 = (x2 + w2 // 2, y2 + h2 // 2)
 
-        # Determine the closest points on the edges of the rooms
+        # closest points on the edges of the rooms
         if center1[0] < center2[0]:  # room1 is to the left of room2
             edge1_x = x1 + w1
             edge2_x = x2
-        else:  # room1 is to the right of room2
+        else:
             edge1_x = x1
             edge2_x = x2 + w2
 
-        if center1[1] < center2[1]:  # room1 is above room2
+        if center1[1] < center2[1]:
             edge1_y = y1 + h1
             edge2_y = y2
-        else:  # room1 is below room2
+        else:
             edge1_y = y1
             edge2_y = y2 + h2
 
-        # Find the closest points on the vertical and horizontal edges
+        #  closest points on edges
         if abs(edge1_x - edge2_x) > abs(edge1_y - edge2_y):
             # Horizontal corridor is longer, so connect vertically first
             edge1 = (edge1_x, random.randint(y1, y1 + h1 - 1))
@@ -293,13 +295,13 @@ class Grid:
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge1[1])
             self.draw_vertical_corridor(edge1[1], edge2[1], edge2[0])
         else:
-            # Vertical corridor is longer, so connect horizontally first
+            # Vertical corridor
             edge1 = (random.randint(x1, x1 + w1 - 1), edge1_y)
             edge2 = (random.randint(x2, x2 + w2 - 1), edge2_y)
             self.draw_vertical_corridor(edge1[1], edge2[1], edge1[0])
             self.draw_horizontal_corridor(edge1[0], edge2[0], edge2[1])
 
-        # Place a door at the starting point of the corridor
+        # Place a door
         door = Entities.Door((edge1[0], edge1[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
         door2 = Entities.Door((edge2[0], edge2[1]), "Assets/Sprites/Entities/MapAssets/Door/Door_closed.png")
         self.set_cell(edge1[0], edge1[1], door)
